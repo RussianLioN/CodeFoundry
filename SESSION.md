@@ -6,17 +6,22 @@
 
 ## 📌 Current Context
 
-**Last Session:** #18 (2026-02-10)
-**Focus:** Expert Consilium v2.0 + Claude Code Skills Lessons
-**Progress:** Expert Consilium v2.0 production ready
+**Last Session:** #19 (2026-02-10)
+**Focus:** OpenClaw Orchestrator Performance + Critical Architecture Bug
+**Progress:** 🔴 CRITICAL BUG DISCOVERED in Intent Pre-Classifier
+
+**Current Issues:**
+- 🔴 **ORCH-007.5:** Intent Pre-Classifier breaks OpenClaw architecture
+  - OpenClaw now bypasses command generation for free-form messages
+  - Defeats the purpose of using AI for NLP intent recognition
+  - Needs fix: improve system prompt OR remove pre-classifier
 
 **Last Achievements:**
-- ✅ Expert Consilium v2.0 with Agent Teams implemented
-- ✅ `/expert-consilium-v2` command working
-- ✅ Claude Code Skills vs Commands lessons documented
-- ✅ Bug fixes: SendMessage, TaskOutput, Write patterns
+- ✅ Webhook optimization: 50% faster responses
+- ✅ CLI Bridge permission error fixed
+- ⚠️ BUT: OpenClaw architecture compromised
 
-**Lessons Learned:** [@ref: docs/lessons/claude-code-skills-vs-commands.md](docs/lessons/claude-code-skills-vs-commands.md)
+**Lessons Learned:** Performance optimization shouldn't break core architecture
 
 **Next Steps:** See [@ref: TASKS.md](TASKS.md)
 
