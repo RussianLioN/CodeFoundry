@@ -62,8 +62,9 @@ export class CommandExecutor {
   private workspace: string;
 
   constructor(config: ExecutorConfig = {}) {
-    // CLI Bridge path (default: relative to workspace)
+    // CLI Bridge path (check env var first, then config, then default)
     this.cliWrapperPath = config.cliWrapperPath ||
+      process.env.CLI_WRAPPER_PATH ||
       `${process.env.REMOTE_GIT_REPO || './server'}/scripts/claude-wrapper.sh`;
 
     // Claude Code container name
