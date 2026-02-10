@@ -157,7 +157,8 @@ services:
       # ============================================================
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_FORMAT=${LOG_FORMAT:-json}
-      - LOG_FILE=/app/logs/gateway.log
+      # Note: LOG_FILE removed to avoid permission issues with CLI Bridge
+      # CLI wrapper uses /tmp/ by default which is writable
 
       # ============================================================
       # Project Context
