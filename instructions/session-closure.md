@@ -59,11 +59,68 @@ git push origin main
 
 ### Step 5: Update SESSION.md
 
-Add session entry with:
-- Session number + date
-- Focus area
-- Achievements (bullet points)
-- Next steps reference
+🚨 **CRITICAL:** UPDATE SESSION.md file, DO NOT create new files!
 
+**Workflow:**
+1. Update `SESSION.md` (root) with new session entry
+2. Create/update archive file: `sessions/archive/sessions-XX.md`
+3. Update `sessions/archive/README.md` index
+4. DELETE any temporary/draft session files
+
+**SESSION.md format:**
+```markdown
+## 📌 Current Context
+
+**Last Session:** #XX (YYYY-MM-DD)
+**Focus:** [тема]
+**Progress:** X% | [статус]
+
+**Last Achievements:**
+- ✅ [краткие достижения]
+
+**Next Steps:** See [@ref: TASKS.md](TASKS.md)
+
+---
+
+## 📚 History
+
+Full session history:
+- [@ref: sessions/archive/sessions-XX.md](sessions/archive/sessions-XX.md) ← **NEW**
+```
+
+**Archive file format (sessions/archive/sessions-XX.md):**
+```markdown
+# Session #XX - [Title]
+
+> [Sessions Archive](./) → **Session #XX**
+
+> **Дата:** YYYY-MM-DD
+> **Фокус:** [тема]
+
+## 🎯 Достигнуто
+
+- ✅ [достижения]
+
+## 📊 Commits
+
+| Commit | Описание |
+|--------|----------|
+| hash | message |
+
+---
+
+> [Previous archive](sessions-XX.md) | [↑ Sessions index](../index.md)
+```
+
+**🚨 NEVER:**
+- ❌ Create `sessions/session-YYYY-MM-DD-[title].md` files
+- ❌ Leave SESSION.md unchanged
+- ❌ Skip updating archive README.md
+
+**✅ ALWAYS:**
+- ✅ Update SESSION.md (Single Source of Truth)
+- ✅ Create/update archive file
+- ✅ Update archive index
+- ✅ Delete temporary files
 
 ---

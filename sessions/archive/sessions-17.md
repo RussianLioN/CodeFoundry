@@ -1,4 +1,6 @@
-# Session Report — MVP Launch + Security Fixes
+# Session #17 - MVP Launch + Security Fixes
+
+> [Sessions Archive](./) → **Session #17**
 
 > **Дата:** 2026-02-10
 > **Длительность:** ~3 часа
@@ -75,22 +77,6 @@ gateway.sendJSON(commandRequest, onProgress);
 - Rule #3: NEVER transfer via GitHub Actions or GitOps
 - Rule #6: WHEN new keys → SCP → update doc
 - Section: "SECURE TRANSFER (SCP ONLY)" с примерами
-
-**До:**
-```
-# ❌ НЕЯВНОЕ правило
-"NEVER commit API keys"
-```
-
-**После:**
-```bash
-# ✅ ЯВНОЕ правило с примерами
-# RIGHT ✅ - Secure copy to server
-scp ~/.telegram-token ainetic.tech:${REMOTE_GIT_REPO}/server/.env.test
-
-# WRONG ❌ - NEVER transfer secrets via Git
-git add .env
-```
 
 **Версия:** 1.1.0 → 1.2.0
 
@@ -207,51 +193,6 @@ docker-compose ... up -d
 
 ---
 
-## 📋 Новые правила для будущих сессий
-
-### Session Start Checklist (MANDATORY)
-
-```bash
-# 1. ПРОВЕРИТЬ TASKS.md ← ВСЕГДА ПЕРВЫМ!
-grep "Phase.*Telegram\|TELEBOT" TASKS.md
-# → Что уже сделано? Что в процессе? Что заблокировано?
-
-# 2. ПРОВЕРИТЬ REMOTE-PATHS.md
-cat docs/REMOTE-PATHS.md | grep -E "SECRET|SCP|API Keys"
-# → Где лежат секреты? Как правильно передавать?
-
-# 3. ПРОВЕРИТЬ GIT STATUS
-git log --oneline -10
-# → Что недавно менялось? Есть локальные изменения?
-
-# 4. ТОЛЬКО ТОГДА начинать работу
-```
-
-### Security Rules (MANDATORY)
-
-```bash
-# ✅ RIGHT - Secure transfer
-scp ~/.telegram-token ainetic.tech:/root/projects/CodeFoundry/server/.env.test
-
-# ❌ WRONG - NEVER do this
-git add .env.test
-git push
-gh secret set TELEGRAM_BOT_TOKEN
-```
-
-### Docker Env Pattern (LEARNED)
-
-```bash
-# ✅ RIGHT - Explicit export
-export TELEGRAM_BOT_TOKEN=...
-docker-compose ... up -d
-
-# ❌ WRONG - env-file doesn't work across directories
-docker-compose --env-file ../server/.env.test up -d
-```
-
----
-
 ## 📈 MVP Progress — 90% Complete
 
 ```
@@ -308,7 +249,7 @@ docker-compose --env-file ../server/.env.test up -d
 
 ## 📊 Commit Details
 
-| Commit | Описание | Строки | Знакение |
+| Commit | Описание | Строки | Значение |
 |--------|----------|-------|----------|
 | **2360105** | docs(agent-quickrefs): add 3 missing quick.md | +348 | 🟡 Medium |
 | **935d37a** | feat(telegram-bot): integrate Command Protocol v1.0 | +64/-11 | 🔴 HIGH |
@@ -353,20 +294,4 @@ docker-compose --env-file ../server/.env.test up -d
 
 ---
 
-**Версия отчёта:** 1.0
-**Дата:** 2026-02-10
-**Следующая сессия:** E2E Testing + Phase 14
-
----
-
-## 🙏 Acknowledgments
-
-**Спасибо пользователю за критику:**
-- Указал на системные ошибки в процессе
-- Подчеркнул важность чтения документации
-- напомнил про существующие артефакты (TASKS.md, REMOTE-PATHS.md)
-
-**Результат:**
-- 3 новых правила в документации
-- 2 критических бага исправлено
-- Процесс оптимизирован для будущих сессий
+> [Archive #14-16](sessions-14-16.md) | [↑ Sessions index](../index.md)
