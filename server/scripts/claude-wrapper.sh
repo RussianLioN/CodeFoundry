@@ -16,7 +16,7 @@ set -euo pipefail
 readonly SCRIPT_VERSION="1.0.0"
 readonly CLAUDE_CODE_CONTAINER="${CLAUDE_CODE_CONTAINER:-claude-code-runner}"
 readonly WORKSPACE_DIR="${WORKSPACE_DIR:-/workspace}"
-readonly LOG_FILE="${LOG_FILE:-/var/log/codefoundry/claude-wrapper-$(date +%Y-%m-%d).log}"
+readonly LOG_FILE="${LOG_FILE:-/tmp/claude-wrapper-$(date +%Y-%m-%d).log}"
 
 # ================================================================
 # LOGGING
