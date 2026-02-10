@@ -5,11 +5,11 @@
 
 > **🚨 MANDATORY DOCUMENT — READ BEFORE ANY SSH OPERATION**
 >
-> **Версия:** 1.1.0
-> **Дата:** 2025-02-05
+> **Версия:** 1.2.0
+> **Дата:** 2026-02-10
 > **Статус:** ACTIVE — SINGLE SOURCE OF TRUTH
 >
-> **🆕 v1.1.0 (Session #13):** Добавлена секция "API Keys & Secrets Location" после инцидента с потерей TELEGRAM_BOT_TOKEN
+> **🆕 v1.2.0 (Current Session):** Добавлено правило "Секреты ТОЛЬКО через SCP" после инцидента с попыткой передачи секретов через Git
 
 ---
 
@@ -49,7 +49,7 @@ REMOTE_GIT_REPO=/root/projects/CodeFoundry
 
 ### 🚨 API Keys & Secrets Location (CRITICAL)
 
-> **🚨 LESSON LEARNED (Session #13):**
+> **🚨 LESSON LEARNED (Session #13, Session #X):**
 > API keys were previously shared but NOT documented in Single Source of Truth.
 > This caused repeated requests for the same credentials. NEVER AGAIN.
 
@@ -75,9 +75,25 @@ REMOTE_ORCHESTRATOR_ENV=${REMOTE_GIT_REPO}/server/.env
 **🚨 CRITICAL RULES:**
 1. ✅ **NEVER** commit actual API keys to Git repository
 2. ✅ **NEVER** print API keys in LLM conversation logs
-3. ✅ **ALWAYS** reference `${REMOTE_TELEGRAM_ENV}` for keys
-4. ✅ **WHEN** new keys are obtained → **IMMEDIATELY** update this file
-5. ✅ **IF** keys are lost → check `${REMOTE_TELEGRAM_ENV}` on server first
+3. ✅ **NEVER** transfer secrets via GitHub Actions or GitOps
+4. ✅ **ALWAYS** transfer secrets via **SCP ONLY** (secure copy)
+5. ✅ **ALWAYS** reference `${REMOTE_TELEGRAM_ENV}` for keys
+6. ✅ **WHEN** new keys are obtained → **IMMEDIATELY** SCP to server → update this file
+7. ✅ **IF** keys are lost → check `${REMOTE_TELEGRAM_ENV}` on server first
+
+**🔐 SECURE TRANSFER (SCP ONLY):**
+```bash
+# RIGHT ✅ - Secure copy to server
+scp ~/.telegram-token ainetic.tech:${REMOTE_GIT_REPO}/server/.env.test
+ssh ainetic.tech "cat ${REMOTE_TELEGRAM_ENV} | grep TELEGRAM_BOT_TOKEN"
+
+# WRONG ❌ - NEVER transfer secrets via Git
+git add .env  # ← FORBIDDEN!
+git push     # ← FORBIDDEN!
+
+# WRONG ❌ - NEVER transfer via GitHub Actions
+echo "::add-mask::$TOKEN"  # ← For CI notifications only, NOT for deployment secrets!
+```
 
 **Usage Pattern:**
 ```bash
@@ -304,14 +320,16 @@ ssh ainetic.tech "tail -f ${REMOTE_LOGS}/errors-$(date +%Y-%m-%d).log"
 
 | Date | Change | Verified |
 |------|--------|----------|
+| 2026-02-10 | v1.2.0: Added "Secrets via SCP ONLY" rule after git transfer incident | ✅ Yes |
+| 2025-02-05 | v1.1.0: Added "API Keys & Secrets Location" section | ✅ Yes |
 | 2025-02-05 | Initial creation (Session #11) | ✅ Yes |
 
 ---
 
-**Версия:** 1.0.0
+**Версия:** 1.2.0
 **Статус:** MANDATORY — ОБЯЗАТЕЛЬНО К ИСПОЛНЕНИЮ
-**Автор:** Claude Code (Lesson from Session #11 — Remote Paths Discovery Problem)
-**Дата:** 2025-02-05
+**Автор:** Claude Code (Lessons from Sessions #11, #13, Current — Security Rules Enforcement)
+**Дата:** 2026-02-10
 
 ---
 
