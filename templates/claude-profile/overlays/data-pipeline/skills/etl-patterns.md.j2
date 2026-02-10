@@ -1,0 +1,18 @@
+# Skill: ETL Patterns
+
+## Contract
+- **Input:** Data source/target description, transformation requirements
+- **Output:** Pipeline implementation (DAG + models + tests)
+- **Stateless:** Yes
+
+## Patterns
+1. **Full Load** — Small tables, reference data
+2. **Incremental** — Large tables, CDC via updated_at or log-based
+3. **SCD Type 2** — Slowly changing dimensions with history
+4. **Snapshot** — Point-in-time captures for audit
+
+## Quality Checks
+- Row count matches source ±1%
+- No null values in required columns
+- Unique constraint on primary keys
+- Referential integrity between tables

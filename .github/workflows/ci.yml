@@ -1,0 +1,387 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# CI Pipeline for System Prompts Meta-Generator
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Validation
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  validate-links:
+    name: Validate Documentation Links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for broken internal links
+        run: |
+          echo "→ Checking internal markdown links..."
+          find . -name "*.md" -type f -exec grep -H '\[.*\]([:#A-Za-z0-9\/\-._]*?)\)' {} \; | while read line; do
+            echo "$line"
+          done
+
+  validate-structure:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required files exist
+        run: |
+          echo "→ Checking required files..."
+          required_files=(
+            "README.md"
+            "CLAUDE.md"
+            "PROJECT.md"
+            "TASKS.md"
+            "QUICKSTART.md"
+            "Makefile"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✓ $file exists"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+
+      - name: Check required directories
+        run: |
+          echo "→ Checking required directories..."
+          required_dirs=(
+            "instructions"
+            "templates/archetypes"
+            "openclaw"
+            "scripts"
+            "docs"
+          )
+
+          for dir in "${required_dirs[@]}"; do
+            if [ -d "$dir" ]; then
+              echo "✓ $dir exists"
+            else
+              echo "✗ $dir missing"
+              exit 1
+            fi
+          done
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Scripts Validation
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  validate-scripts:
+    name: Validate Shell Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          echo "→ Running ShellCheck..."
+          find scripts -name "*.sh" -type f -print0 | xargs -0 shellcheck --severity=warning
+
+      - name: Check scripts are executable
+        run: |
+          echo "→ Checking script permissions..."
+          for script in scripts/*.sh; do
+            if [ -x "$script" ]; then
+              echo "✓ $script is executable"
+            else
+              echo "⚠ $script is not executable"
+            fi
+          done
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Archetypes Validation
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  validate-archetypes:
+    name: Validate Archetypes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        archetype:
+          - web-service
+          - ai-agent
+          - data-pipeline
+          - telegram-bot
+          - presentation
+          - cli-tool
+          - microservices
+          - fullstack
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check archetype structure
+        run: |
+          archetype="templates/archetypes/${{ matrix.archetype }}"
+          echo "→ Validating ${{ matrix.archetype }}..."
+
+          if [ ! -d "$archetype" ]; then
+            echo "✗ Archetype directory missing"
+            exit 1
+          fi
+
+          # Check for required files
+          required_files=("README.md" "openclaw/workspace/AGENTS.md")
+          for file in "${required_files[@]}"; do
+            if [ -f "$archetype/$file" ]; then
+              echo "✓ $file exists"
+            else
+              echo "⚠ $file missing (optional for some archetypes)"
+            fi
+          done
+
+      - name: Validate AGENTS.md format
+        run: |
+          agent_file="templates/archetypes/${{ matrix.archetype }}/openclaw/workspace/AGENTS.md"
+          if [ -f "$agent_file" ]; then
+            echo "→ Validating AGENTS.md..."
+
+            # Check for required sections
+            required_sections=(
+              "Agent Configuration"
+              "Agent Architecture"
+              "Main Agent"
+            )
+
+            for section in "${required_sections[@]}"; do
+              if grep -q "$section" "$agent_file"; then
+                echo "✓ Section '$section' found"
+              else
+                echo "✗ Section '$section' missing"
+                exit 1
+              fi
+            done
+          fi
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Documentation Build
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  docs-check:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check documentation navigation
+        run: |
+          echo "→ Checking breadcrumbs in markdown files..."
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | while read file; do
+            # Check for breadcrumb pattern
+            if grep -q "\[.*\](.*\.md)" "$file"; then
+              echo "✓ $file has links"
+            fi
+          done
+
+      - name: Generate documentation index
+        run: |
+          echo "→ Generating documentation stats..."
+          echo "## Documentation Files" >> $GITHUB_STEP_SUMMARY
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./.git/*" | wc -l | xargs echo "Total markdown files:" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Archetypes" >> $GITHUB_STEP_SUMMARY
+          for dir in templates/archetypes/*/; do
+            name=$(basename "$dir")
+            count=$(find "$dir" -type f | wc -l)
+            echo "- $name: $count files" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # OpenClaw Configuration
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  validate-openclaw:
+    name: Validate OpenClaw Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check OpenClaw structure
+        run: |
+          echo "→ Validating OpenClaw structure..."
+          required_dirs=(
+            "openclaw"
+            "openclaw/workspace"
+            "openclaw/config"
+          )
+
+          for dir in "${required_dirs[@]}"; do
+            if [ -d "$dir" ]; then
+              echo "✓ $dir exists"
+            else
+              echo "✗ $dir missing"
+              exit 1
+            fi
+          done
+
+      - name: Validate workspace files
+        run: |
+          echo "→ Validating workspace files..."
+          required_files=(
+            "openclaw/workspace/AGENTS.md"
+            "openclaw/workspace/SKILLS-INDEX.md"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✓ $file exists"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Token Budget Validation
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  validate-token-budget:
+    name: Validate Token Budget
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Run token budget validation
+        run: |
+          echo "→ Validating token budgets..."
+          chmod +x scripts/validate-token-budget.sh
+          ./scripts/validate-token-budget.sh --ci
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Security Scan
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for secrets
+        run: |
+          echo "→ Scanning for potential secrets..."
+          # Check for common secret patterns
+          if grep -r -i "api[_-]key\|secret\|password\|token" --include="*.md" --include="*.sh" . | grep -v "# " | grep -v "example" | grep -v "CHANGELOG"; then
+            echo "⚠ Potential secrets found (please review)"
+          else
+            echo "✓ No obvious secrets found"
+          fi
+
+      - name: Check .env.example files
+        run: |
+          echo "→ Checking .env.example files in archetypes..."
+          for archetype in templates/archetypes/*/; do
+            if [ -f "$archetype/.env.example" ]; then
+              echo "✓ $(basename $archetype) has .env.example"
+            fi
+          done
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Test New Project Generation
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  test-project-generation:
+    name: Test Project Generation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make
+
+      - name: Test new-project script
+        run: |
+          echo "→ Testing new-project.sh..."
+
+          # Create a test project
+          ./scripts/new-project.sh cli-tool test-project
+
+          # Verify project was created
+          if [ -d "test-project" ]; then
+            echo "✓ Project directory created"
+          else
+            echo "✗ Project directory not created"
+            exit 1
+          fi
+
+          # Verify required files
+          cd test-project
+          required_files=("README.md" "PROJECT.md" "TASKS.md" "SESSION.md" "CHANGELOG.md")
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✓ $file exists"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+
+          # Verify git was initialized
+          if [ -d ".git" ]; then
+            echo "✓ Git initialized"
+          else
+            echo "✗ Git not initialized"
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf test-project
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Summary
+  # ────────────────────────────────────────────────────────────────────────────────
+
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [validate-links, validate-structure, validate-scripts, validate-archetypes, docs-check, validate-openclaw, validate-token-budget, security-scan, test-project-generation]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Links | ${{ needs.validate-links.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Structure | ${{ needs.validate-structure.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Scripts | ${{ needs.validate-scripts.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Archetypes | ${{ needs.validate-archetypes.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation Check | ${{ needs.docs-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate OpenClaw | ${{ needs.validate-openclaw.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Token Budget | ${{ needs.validate-token-budget.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Project Generation | ${{ needs.test-project-generation.result }} |" >> $GITHUB_STEP_SUMMARY

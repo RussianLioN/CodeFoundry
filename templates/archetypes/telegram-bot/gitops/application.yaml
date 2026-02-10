@@ -1,0 +1,59 @@
+# ArgoCD Application for Telegram Bot
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: telegram-bot
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: telegram-bot
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/telegram-bot/k8s/overlays/production
+    kustomize:
+      images:
+      - name: telegram-bot
+        newTag: latest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: telegram-bot
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+      - /spec/replicas
+
+---
+# Staging
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: telegram-bot-staging
+  namespace: argocd
+  labels:
+    environment: staging
+spec:
+  project: staging
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/telegram-bot/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: telegram-bot-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

@@ -1,0 +1,44 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Docker Compose for System Prompts Development
+# ═══════════════════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # System Prompts Meta-Generator
+  # ────────────────────────────────────────────────────────────────────────────────
+  meta-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: system-prompts
+    working_dir: /system-prompts
+    volumes:
+      - .:/system-prompts
+      - /workspace:/workspace
+    environment:
+      - SYSTEM_PROMPTS_HOME=/system-prompts
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Documentation Server (optional)
+  # ────────────────────────────────────────────────────────────────────────────────
+  docs:
+    image: python:3.11-alpine
+    container_name: system-prompts-docs
+    working_dir: /docs
+    volumes:
+      - .:/system-prompts
+      - docs-content:/system-prompts/docs
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "cd /system-prompts && python3 -m http.server 8000"
+    profiles:
+      - docs
+
+volumes:
+  docs-content:

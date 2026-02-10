@@ -1,0 +1,61 @@
+# ArgoCD Staging Project
+# Staging environment with relaxed policies for testing
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+    environment: staging
+spec:
+  description: Staging environment for CodeFoundry applications
+
+  # CodeFoundry repository
+  sourceRepos:
+  - https://github.com/RussianLioN/CodeFoundry
+
+  # Staging destinations (can be multiple clusters)
+  destinations:
+  - namespace: '*-staging'
+    server: https://kubernetes.default.svc
+  # Add remote staging cluster:
+  # - namespace: '*-staging'
+  #   server: https://staging-cluster.example.com
+
+  # Allow most resources in staging
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+
+  # Deny production-critical resources
+  namespaceResourceBlacklist:
+  - group: ''
+    kind: ResourceQuota
+
+  # Auto-sync enabled for staging
+  syncWindows:
+  - kind: allow
+    schedule: '* * * * *'  # Any time
+    duration: 24h
+    applications:
+    - '*'
+    namespaces:
+    - '*-staging'
+
+  # Automatic sync on Git changes
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 10m

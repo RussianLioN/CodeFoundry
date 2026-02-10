@@ -1,0 +1,101 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Alertmanager Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  slack_api_url_file: '/etc/alertmanager/slack_webhook_url'
+
+# Templates for alerts
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route configuration
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+
+  routes:
+    # Critical alerts go immediately
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # CI alerts go to CI channel
+    - match:
+        component: ci
+      receiver: 'ci-alerts'
+      repeat_interval: 1h
+
+    # Documentation alerts go to docs channel
+    - match:
+        component: documentation
+      receiver: 'docs-alerts'
+      repeat_interval: 24h
+
+    # Project generation alerts
+    - match:
+        component: project-generation
+      receiver: 'project-alerts'
+      repeat_interval: 1h
+
+# Inhibition rules
+inhibit_rules:
+  # Inhibit warning if critical is firing for the same alert
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+
+# Receivers
+receivers:
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts'
+        send_resolved: true
+        title: '{{ .GroupLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+
+  - name: 'critical'
+    slack_configs:
+      - channel: '#critical-alerts'
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        text: >-
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Description:* {{ .Annotations.description }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+
+  - name: 'ci-alerts'
+    slack_configs:
+      - channel: '#ci-cd'
+        send_resolved: true
+        title: 'CI/CD: {{ .GroupLabels.alertname }}'
+
+  - name: 'docs-alerts'
+    slack_configs:
+      - channel: '#documentation'
+        send_resolved: true
+        title: 'Docs: {{ .GroupLabels.alertname }}'
+
+  - name: 'project-alerts'
+    slack_configs:
+      - channel: '#projects'
+        send_resolved: true
+        title: 'Projects: {{ .GroupLabels.alertname }}'

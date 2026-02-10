@@ -1,0 +1,520 @@
+{
+  "$schema": ".claude/schemas/auto-routing-rules.schema.json",
+  "version": "1.1.0",
+  "description": "Auto-routing rules for multi-agent orchestration in CodeFoundry",
+
+  "rules": [
+    {
+      "id": "coordinate-workflow",
+      "name": "Multi-Agent Coordination",
+      "priority": 100,
+      "agent": "system",
+      "triggers": {
+        "keywords": [
+          "coordinate",
+          "orchestrate",
+          "manage agents",
+          "координируй",
+          "организуй"
+        ],
+        "patterns": [
+          "ask (.+) to (.+)",
+          "tell (.+) to (.+)",
+          "have (.+) (.+)",
+          "попроси (.+) (.+)",
+          "застав (.+) (.+)"
+        ]
+      },
+      "context": {
+        "multiAgent": true,
+        "requiresContext": true
+      }
+    },
+    {
+      "id": "code-implementation",
+      "name": "Code Implementation",
+      "priority": 90,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "write",
+          "implement",
+          "create",
+          "add",
+          "build",
+          "напиши",
+          "создай",
+          "добавь",
+          "реализуй",
+          "сделай"
+        ],
+        "patterns": [
+          "write (.+) (function|class|method|component)",
+          "implement (.+) (feature|functionality)",
+          "create (.+) (file|module|component)",
+          "add (.+) (feature|function)",
+          "напиши (.+) (функцию|класс|метод|компонент)",
+          "создай (.+) (файл|модуль|компонент)",
+          "реализуй (.+) (функционал|возможность)"
+        ]
+      },
+      "context": {
+        "codeRelated": true,
+        "requiresFileContext": true
+      }
+    },
+    {
+      "id": "code-refactoring",
+      "name": "Code Refactoring",
+      "priority": 85,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "refactor",
+          "rewrite",
+          "optimize",
+          "improve",
+          "clean up",
+          "рефактори",
+          "перепиши",
+          "оптимизируй",
+          "улучши",
+          "почисти"
+        ],
+        "patterns": [
+          "refactor (.+) (function|class|module)",
+          "optimize (.+) (code|performance)",
+          "improve (.+) (readability|structure)",
+          "рефактори (.+) (функцию|класс|модуль)",
+          "оптимизируй (.+) (код|производительность)"
+        ]
+      },
+      "context": {
+        "codeRelated": true,
+        "requiresExistingCode": true
+      }
+    },
+    {
+      "id": "code-review",
+      "name": "Code Review",
+      "priority": 95,
+      "agent": "reviewer",
+      "triggers": {
+        "keywords": [
+          "review",
+          "check",
+          "analyze",
+          "audit",
+          "inspect",
+          "проверь",
+          "проанализируй",
+          "ревью",
+          "осмотри"
+        ],
+        "patterns": [
+          "review (.+) (code|changes|diff)",
+          "check (.+) (code|implementation)",
+          "analyze (.+) (code|pull request|PR)",
+          "проверь (.+) (код|изменения)",
+          "сделай ревью (.+)"
+        ]
+      },
+      "context": {
+        "codeRelated": true,
+        "qualityFocus": true
+      }
+    },
+    {
+      "id": "quality-check",
+      "name": "Quality Check",
+      "priority": 80,
+      "agent": "reviewer",
+      "triggers": {
+        "keywords": [
+          "quality",
+          "best practices",
+          "standards",
+          "conventions",
+          "lint",
+          "качество",
+          "стандарты",
+          "конвенции"
+        ],
+        "patterns": [
+          "check (.+) quality",
+          "ensure (.+) follows (.+) (standards|conventions)",
+          "verify (.+) (best|practices)",
+          "проверь (.+) (качество|стандарты)",
+          "следует ли (.+) (стандартам|конвенциям)"
+        ]
+      },
+      "context": {
+        "qualityFocus": true
+      }
+    },
+    {
+      "id": "test-generation",
+      "name": "Test Generation",
+      "priority": 88,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "test",
+          "spec",
+          "coverage",
+          "mock",
+          "assert",
+          "протестируй",
+          "напиши тест",
+          "покрытие",
+          "coverage"
+        ],
+        "patterns": [
+          "write tests? for (.+)",
+          "test (.+) (function|class|module)",
+          "generate tests? for (.+)",
+          "check coverage for (.+)",
+          "протестируй (.+)",
+          "напиши тесты? для (.+)",
+          "сгенерируй тесты? для (.+)"
+        ]
+      },
+      "context": {
+        "testingRelated": true,
+        "requiresCodeContext": true
+      }
+    },
+    {
+      "id": "test-verification",
+      "name": "Test Verification",
+      "priority": 75,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "run tests",
+          "verify tests",
+          "check tests",
+          "test results",
+          "запусти тесты",
+          "проверь тесты",
+          "результаты тестов"
+        ],
+        "patterns": [
+          "run tests?",
+          "check if tests? pass",
+          "verify test coverage",
+          "show test results",
+          "запусти тесты?",
+          "проверь результаты тестов"
+        ]
+      },
+      "context": {
+        "testingRelated": true
+      }
+    },
+    {
+      "id": "documentation",
+      "name": "Documentation",
+      "priority": 70,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "document",
+          "docstring",
+          "readme",
+          "api docs",
+          "документация",
+          "документируй",
+          "докстроки"
+        ],
+        "patterns": [
+          "document (.+) (function|class|module)",
+          "add docstrings? to (.+)",
+          "update (.+) (documentation|docs|readme)",
+          "generate api docs for (.+)",
+          "документируй (.+)",
+          "добавь документацию к (.+)",
+          "обнови (.+) (документацию|readme)"
+        ]
+      },
+      "context": {
+        "documentationRelated": true
+      }
+    },
+    {
+      "id": "documentation-monitor",
+      "name": "Documentation Monitoring",
+      "priority": 5,
+      "agent": "documentation-agent",
+      "triggers": {
+        "keywords": [
+          "doc-check",
+          "doc-review",
+          "validate docs",
+          "stale docs",
+          "check documentation",
+          "проверь документацию",
+          "валидация доков"
+        ],
+        "patterns": [
+          "(check|validate) (documentation|docs)",
+          "doc-?check",
+          "documentation (health|report)",
+          "stale (documentation|docs)"
+        ]
+      },
+      "context": {
+        "documentationRelated": true
+      }
+    },
+    {
+      "id": "debugging",
+      "name": "Debugging",
+      "priority": 92,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "debug",
+          "fix error",
+          "fix bug",
+          "troubleshoot",
+          "investigate",
+          "отладь",
+          "исправь ошибку",
+          "найди баг",
+          "почему не работает",
+          "разберись"
+        ],
+        "patterns": [
+          "debug (.+)",
+          "fix (.+) (error|bug|issue)",
+          "why (.+) (not working|failing|failing)",
+          "troubleshoot (.+)",
+          "отладь (.+)",
+          "исправь (.+) (ошибку|баг)",
+          "почему (.+) (не работает|падает)"
+        ]
+      },
+      "context": {
+        "errorRelated": true,
+        "requiresErrorContext": true
+      }
+    },
+    {
+      "id": "security-analysis",
+      "name": "Security Analysis",
+      "priority": 98,
+      "agent": "reviewer",
+      "triggers": {
+        "keywords": [
+          "security",
+          "vulnerability",
+          "exploit",
+          "xss",
+          "sql injection",
+          "безопасность",
+          "уязвимость",
+          "защити"
+        ],
+        "patterns": [
+          "check (.+) (security|vulnerabilities)",
+          "scan for (.+) (security issues|vulnerabilities)",
+          "is (.+) (secure|safe)",
+          "проверь (.+) (безопасность|уязвимости)",
+          "защити (.+) от (.+)"
+        ]
+      },
+      "context": {
+        "securityRelated": true,
+        "highPriority": true
+      }
+    },
+    {
+      "id": "performance-optimization",
+      "name": "Performance Optimization",
+      "priority": 82,
+      "agent": "code_assistant",
+      "triggers": {
+        "keywords": [
+          "performance",
+          "speed",
+          "latency",
+          "throughput",
+          "производительность",
+          "ускорь"
+        ],
+        "patterns": [
+          "optimize (.+) (performance|speed)",
+          "improve (.+) (performance|latency)",
+          "benchmark (.+)",
+          "profile (.+)",
+          "оптимизируй (.+) (производительность|скорость)",
+          "улучши (.+) (производительность|быстродействие)"
+        ]
+      },
+      "context": {
+        "performanceRelated": true
+      }
+    },
+    {
+      "id": "project-generation",
+      "name": "Project Generation",
+      "priority": 100,
+      "agent": "system",
+      "command": "cf-new",
+      "triggers": {
+        "keywords": [
+          "create project",
+          "new project",
+          "generate project",
+          "создай проект",
+          "новый проект"
+        ],
+        "patterns": [
+          "create (a )?(new )?project",
+          "generate (a )?(new )?project",
+          "start (a )?(new )?project",
+          "создай (новый )?проект",
+          "сгенерируй (новый )?проект"
+        ]
+      },
+      "context": {
+        "projectGeneration": true,
+        "systemCommand": true
+      }
+    },
+    {
+      "id": "agent-generation",
+      "name": "Agent Generation",
+      "priority": 100,
+      "agent": "system",
+      "command": "cf-agents",
+      "triggers": {
+        "keywords": [
+          "generate agents",
+          "create agents",
+          "add agents",
+          "сгенерируй агента",
+          "создай агента",
+          "добавь агента"
+        ],
+        "patterns": [
+          "generate agents? for (.+)",
+          "create agents? for (.+)",
+          "add agents? to (.+)",
+          "сгенерируй (агента|агентов) для (.+)",
+          "создай (агента|агентов) для (.+)"
+        ]
+      },
+      "context": {
+        "agentGeneration": true,
+        "systemCommand": true
+      }
+    },
+    {
+      "id": "token-optimization",
+      "name": "Token Optimization",
+      "priority": 85,
+      "agent": "token-optimizer",
+      "command": "cf-optimize",
+      "triggers": {
+        "keywords": [
+          "optimize tokens",
+          "token audit",
+          "reduce tokens",
+          "token count",
+          "instruction size",
+          "оптимизируй токены",
+          "аудит токенов",
+          "сколько токенов",
+          "уменьши токены"
+        ],
+        "patterns": [
+          "optimize (.+) (tokens|instructions)",
+          "audit (.+) (tokens|size)",
+          "how many tokens",
+          "оптимизируй (.+) (токены|инструкции)",
+          "сколько (.+) (токенов|весят)"
+        ]
+      },
+      "context": {
+        "tokenOptimization": true,
+        "systemCommand": true
+      }
+    },
+    {
+      "id": "backup-coordinator",
+      "name": "Backup Coordinator",
+      "priority": 90,
+      "agent": "backup-coordinator",
+      "triggers": {
+        "keywords": [
+          "backup",
+          "rollback",
+          "restore",
+          "validate backup",
+          "agent teams safety",
+          "backup coordinator",
+          "бэкап",
+          "откат",
+          "восстанови"
+        ],
+        "patterns": [
+          "create (a )?backup",
+          "rollback (to )?(.+)",
+          "restore (from )?(.+)",
+          "validate (backup|state)",
+          "(backup|rollback) coordinator"
+        ]
+      },
+      "context": {
+        "safetyRelated": true,
+        "backupOperation": true
+      }
+    },
+    {
+      "id": "deployment",
+      "name": "Deployment",
+      "priority": 100,
+      "agent": "system",
+      "command": "cf-deploy",
+      "triggers": {
+        "keywords": [
+          "deploy",
+          "deployment",
+          "release",
+          "задеплой",
+          "деплой",
+          "релиз"
+        ],
+        "patterns": [
+          "deploy (.+) to (.+)",
+          "release (.+) to (.+)",
+          "задеплой (.+) (в|на) (.+)",
+          "сделай деплой (.+)"
+        ]
+      },
+      "context": {
+        "deploymentRelated": true,
+        "systemCommand": true
+      }
+    }
+  ],
+
+  "fallbackRules": {
+    "defaultAgent": "code_assistant",
+    "confidenceThreshold": 0.7,
+    "allowMultipleAgents": true,
+    "maxAgentsPerRequest": 3
+  },
+
+  "contextHints": {
+    "codeRelated": ["function", "class", "method", "variable", "file", "module", "component", "функция", "класс", "метод"],
+    "qualityFocus": ["quality", "best practice", "standard", "convention", "lint", "качество", "стандарт"],
+    "testingRelated": ["test", "spec", "mock", "assert", "coverage", "тест", "покрытие"],
+    "documentationRelated": ["document", "docstring", "readme", "api doc", "документация", "readme"],
+    "errorRelated": ["error", "bug", "issue", "fail", "crash", "ошибка", "баг", "падает"],
+    "securityRelated": ["security", "vulnerability", "exploit", "xss", "injection", "безопасность", "уязвимость"],
+    "performanceRelated": ["performance", "optimize", "speed", "latency", "benchmark", "производительность", "оптимизация"]
+  }
+}

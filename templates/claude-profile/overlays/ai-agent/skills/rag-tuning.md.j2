@@ -1,0 +1,20 @@
+# Skill: RAG Tuning
+
+## Contract
+- **Input:** RAG pipeline config or retrieval quality issue
+- **Output:** Optimized parameters with before/after metrics
+- **Stateless:** Yes
+
+## Tuning Dimensions
+1. **Chunking:** size (256-2048 tokens), overlap (10-25%), strategy
+2. **Embedding:** model selection, dimension, similarity metric
+3. **Retrieval:** top_k (3-10), threshold, hybrid search weight
+4. **Re-ranking:** cross-encoder model, score threshold
+
+## Common Fixes
+| Symptom | Fix |
+|---------|-----|
+| Irrelevant results | Decrease chunk size, add metadata filtering |
+| Missing context | Increase chunk overlap, increase top_k |
+| Slow retrieval | Add approximate search (HNSW), reduce dimensions |
+| Hallucination | Lower temperature, add citation requirement |

@@ -1,0 +1,61 @@
+# ArgoCD Application for Data Pipeline
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-pipeline
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: data-pipeline
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/data-pipeline/k8s/overlays/production
+    kustomize:
+      images:
+      - name: data-pipeline
+        newTag: latest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data-pipeline
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      kind: StatefulSet
+      jsonPointers:
+      - /spec/replicas
+      - /spec/volumeClaimTemplates
+
+---
+# Staging
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: data-pipeline-staging
+  namespace: argocd
+  labels:
+    environment: staging
+spec:
+  project: staging
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/data-pipeline/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: data-pipeline-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

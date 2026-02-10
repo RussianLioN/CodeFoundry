@@ -1,0 +1,34 @@
+{
+  "compileOnSave": false,
+  "exclude": ["node_modules", "tmp"],
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@fullstack/types": ["packages/types/src/index.ts"],
+      "@fullstack/ui": ["packages/ui/src/index.ts"],
+      "@fullstack/api-client": ["packages/api-client/src/index.ts"],
+      "@fullstack/validators": ["packages/validators/src/index.ts"]
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "exclude": ["node_modules", "tmp"]
+}

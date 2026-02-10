@@ -1,0 +1,244 @@
+{
+  "$schema": "https://openclaw.dev/schema/v1",
+  "version": "1.0.0",
+
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 18789,
+    "healthPort": 18790,
+    "maxConnections": 100,
+    "sessionTimeout": 3600000,
+    "maxSessions": 100
+  },
+
+  "ai": {
+    "provider": "ollama",
+    "baseUrl": "http://ollama-service:11434",
+    "model": "gemini-3-flash",
+    "fallbackModel": "openclaw-gemini",
+    "temperature": 0.7,
+    "maxTokens": 4096,
+    "contextWindow": 131072,
+
+    "retry": {
+      "maxAttempts": 3,
+      "backoffMs": 1000,
+      "retryableErrors": [
+        "ECONNREFUSED",
+        "ETIMEDOUT",
+        "503",
+        "502"
+      ]
+    },
+
+    "timeout": {
+      "request": 30000,
+      "stream": 120000
+    }
+  },
+
+  "workspace": {
+    "root": "/workspace",
+    "projectsDir": "/workspace/projects",
+    "agentsDir": "/workspace/agents",
+    "skillsDir": "/workspace/skills",
+
+    "codefoundry": {
+      "path": "/workspace/system-prompts",
+      "instructionsDir": "/workspace/system-prompts/instructions",
+      "templatesDir": "/workspace/system-prompts/templates",
+      "scriptsDir": "/workspace/system-prompts/scripts"
+    }
+  },
+
+  "agents": {
+    "default": "main",
+
+    "customAgents": {
+      "main": {
+        "model": "gemini-3-flash",
+        "temperature": 0.7,
+        "maxTokens": 4096,
+        "tools": ["bash", "read", "write", "edit", "git", "docker", "browser"],
+        "sandbox": false,
+        "systemPrompt": "You are OpenClaw Main Agent - orchestrates all development tasks.",
+        "triggers": {
+          "keywords": [],
+          "default": true
+        }
+      },
+
+      "dev": {
+        "model": "gemini-3-flash",
+        "temperature": 0.5,
+        "maxTokens": 8192,
+        "tools": ["bash", "read", "write", "edit", "git"],
+        "sandbox": true,
+        "systemPrompt": "You are Development Agent - specializes in writing and refactoring code.",
+        "triggers": {
+          "keywords": ["напиши", "создай", "рефактори", "код", "функцию", "class", "function"]
+        },
+        "skills": ["development/*"]
+      },
+
+      "devops": {
+        "model": "gemini-3-flash",
+        "temperature": 0.5,
+        "maxTokens": 4096,
+        "tools": ["bash", "docker", "git", "cron"],
+        "sandbox": true,
+        "systemPrompt": "You are DevOps Agent - specializes in deployment and infrastructure.",
+        "triggers": {
+          "keywords": ["деплой", "запусти", "перезапусти", "docker", "k8s", "ci", "cd"]
+        },
+        "skills": ["devops/*"]
+      },
+
+      "prompt": {
+        "model": "gemini-3-flash",
+        "temperature": 0.7,
+        "maxTokens": 4096,
+        "tools": ["read", "write", "edit"],
+        "sandbox": false,
+        "systemPrompt": "You are Prompt Engineer Agent - creates and optimizes system prompts.",
+        "triggers": {
+          "keywords": ["промпт", "prompt", "системный промпт", "инструкция"]
+        },
+        "skills": ["ai-assistants/*"]
+      },
+
+      "codefoundry": {
+        "model": "gemini-3-flash",
+        "temperature": 0.7,
+        "maxTokens": 8192,
+        "tools": ["bash", "read", "write", "edit", "git"],
+        "sandbox": false,
+        "systemPrompt": "You are CodeFoundry Agent - specializes in project and agent generation.",
+        "triggers": {
+          "keywords": ["создай проект", "новый проект", "инициализируй", "сгенерируй агента"]
+        },
+        "workspace": "/workspace/system-prompts",
+        "skills": ["codefoundry/*"]
+      }
+    }
+  },
+
+  "channels": {
+    "websocket": {
+      "enabled": true,
+      "path": "/ws",
+      "cors": {
+        "origin": "*"
+      }
+    },
+
+    "telegram": {
+      "enabled": false,
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "webhookUrl": "https://localhost:18789/telegram",
+      "webhookSecret": "${TELEGRAM_WEBHOOK_SECRET}",
+      "allowFrom": ["*"],
+      "dmPolicy": "pairing",
+      "rateLimit": {
+        "messagesPerMinute": 30,
+        "banDuration": 300
+      },
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      }
+    }
+  },
+
+  "tools": {
+    "bash": {
+      "enabled": true,
+      "allowedCommands": ["*"],
+      "blockedCommands": ["rm -rf /", "dd if=/dev/zero"],
+      "timeout": 30000,
+      "maxOutputLength": 10000
+    },
+
+    "read": {
+      "enabled": true,
+      "maxFileSize": 10485760,
+      "allowedPaths": ["/workspace"],
+      "blockedPaths": ["/etc", "/root", "/var/run"]
+    },
+
+    "write": {
+      "enabled": true,
+      "allowedPaths": ["/workspace"],
+      "blockedPaths": ["/etc", "/root", "/var/run"],
+      "requireConfirmation": true,
+      "maxFileSize": 1048576
+    },
+
+    "edit": {
+      "enabled": true,
+      "allowedPaths": ["/workspace"],
+      "blockedPaths": ["/etc", "/root", "/var/run"],
+      "requireConfirmation": true
+    },
+
+    "git": {
+      "enabled": true,
+      "allowedCommands": ["status", "add", "commit", "push", "pull", "log", "diff"],
+      "autoCommit": false
+    },
+
+    "docker": {
+      "enabled": true,
+      "socketPath": "/var/run/docker.sock",
+      "allowedCommands": ["ps", "logs", "exec", "compose", "run", "build"],
+      "requireConfirmation": ["rm", "rmi", "down"]
+    }
+  },
+
+  "sandbox": {
+    "enabled": true,
+    "image": "openclaw/sandbox:latest",
+    "timeout": 60000,
+    "memoryLimit": "512m",
+    "cpuLimit": "0.5"
+  },
+
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "file": "/app/logs/openclaw.log",
+    "maxFiles": 10,
+    "maxSize": "10M"
+  },
+
+  "monitoring": {
+    "enabled": true,
+    "port": 18791,
+    "path": "/metrics"
+  },
+
+  "features": {
+    "voiceTranscription": {
+      "enabled": true,
+      "provider": "openai",
+      "model": "whisper-1"
+    },
+
+    "voiceSynthesis": {
+      "enabled": false,
+      "provider": "elevenlabs",
+      "voiceId": "${ELEVENLABS_VOICE_ID}"
+    },
+
+    "sessionPersistence": {
+      "enabled": true,
+      "path": "/app/sessions"
+    },
+
+    "autoSessionTracking": {
+      "enabled": true,
+      "updateInterval": 60000
+    }
+  }
+}

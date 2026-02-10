@@ -1,0 +1,19 @@
+# Skill: API Development
+
+## Contract
+- **Input:** API requirement (endpoint, method, data model)
+- **Output:** Implementation with validation, error handling, tests
+- **Stateless:** Yes
+
+## Patterns
+1. RESTful resource naming: `/api/v1/{resource}`
+2. Request validation (Zod/Pydantic/validator)
+3. Error responses: `{ "error": { "code": "...", "message": "..." } }`
+4. Auth middleware (JWT/API key)
+5. Rate limiting headers
+6. OpenAPI documentation
+
+## Anti-patterns
+- No business logic in controllers/handlers
+- No raw SQL in route handlers (use ORM/query builder)
+- No secrets in response bodies

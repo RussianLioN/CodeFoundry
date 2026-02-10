@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "description": "Auto-routing rules for {{ project_name }} ({{ archetype }})",
+  "defaultAgent": "coordinator",
+  "rules": [
+    {
+      "pattern": "review|pr|quality|lint",
+      "agent": "reviewer",
+      "priority": 10
+    },
+    {
+      "pattern": "test|spec|coverage|unittest",
+      "agent": "tester",
+      "priority": 10
+    },
+    {
+      "pattern": "code|implement|fix|bug|feature|refactor",
+      "agent": "code-assistant",
+      "priority": 5
+    }
+    {%- for rule in routing_overrides | default([]) %},
+    {
+      "pattern": "{{ rule.pattern }}",
+      "agent": "{{ rule.agent }}",
+      "priority": {{ rule.priority | default(8) }}
+    }
+    {%- endfor %}
+  ]
+}

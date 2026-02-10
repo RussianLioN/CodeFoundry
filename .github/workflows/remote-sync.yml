@@ -1,0 +1,160 @@
+# OpenClaw Remote Sync Workflow
+#
+# Automatically sync changes from GitHub to remote server
+# Triggered by push to main branch
+
+name: OpenClaw Remote Sync
+
+on:
+  push:
+    branches: [main]
+
+  # Manual trigger
+  workflow_dispatch:
+
+env:
+  # Server configuration (set in GitHub secrets)
+  REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+  REMOTE_USER: ${{ secrets.REMOTE_USER }}
+  REMOTE_PATH: ${{ secrets.REMOTE_PATH || '/opt/openclaw' }}
+
+  # Telegram notifications
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  # ============================================================
+  # Validate changes before deploying
+  # ============================================================
+  validate:
+    name: Validate Changes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate structure
+        run: |
+          echo "Validating repository structure..."
+          # Add validation scripts here
+
+      - name: Check for errors
+        run: |
+          echo "Checking for common errors..."
+          # Add error checks here
+
+  # ============================================================
+  # Sync to remote server
+  # ============================================================
+  sync:
+    name: Sync to Remote Server
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Sync to remote
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.REMOTE_HOST }}
+          username: ${{ env.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "Syncing OpenClaw on remote server..."
+            echo "Repository: ${{ github.repository }}"
+            echo "Commit: ${{ github.sha }}"
+            echo "Author: ${{ github.actor }}"
+            echo ""
+
+            cd ${{ env.REMOTE_PATH }}
+
+            # Pull latest changes
+            echo "Pulling latest changes..."
+            git fetch origin
+            git reset --hard origin/main
+
+            # Restart services if needed
+            echo "Checking if restart needed..."
+            if git diff --name-only HEAD~1 HEAD | grep -E "(docker-compose|\.env|package\.json)"; then
+                echo "Configuration changed, restarting services..."
+                docker compose -f docker/docker-compose.yml \
+                              -f docker/docker-compose.prod.yml \
+                              up -d --build
+
+                # Wait for health check
+                echo "Waiting for services to be healthy..."
+                sleep 10
+
+                # Check health
+                if curl -f http://localhost:18790/health; then
+                    echo "✅ Services healthy"
+                else
+                    echo "❌ Health check failed"
+                    exit 1
+                fi
+            else
+                echo "No configuration changes, skip restart"
+            fi
+
+            echo ""
+            echo "✅ Sync complete"
+
+      - name: Notify success
+        if: success()
+        run: |
+          if [ -n "${{ env.TELEGRAM_BOT_TOKEN }}" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+              -d text="✅ *OpenClaw Sync Success*%0A%0ARepository: ${{ github.repository }}%0ACommit: ${{ github.sha }}%0AAuthor: ${{ github.actor }}" \
+              -d parse_mode="Markdown"
+          fi
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          if [ -n "${{ env.TELEGRAM_BOT_TOKEN }}" ]; then
+            curl -s -X POST "https://api.telegram.org/bot${{ env.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              -d chat_id="${{ env.TELEGRAM_CHAT_ID }}" \
+              -d text="❌ *OpenClaw Sync Failed*%0A%0ARepository: ${{ github.repository }}%0ACommit: ${{ github.sha }}%0AAction required!" \
+              -d parse_mode="Markdown"
+          fi
+
+  # ============================================================
+  # Backup after sync
+  # ============================================================
+  backup:
+    name: Create Backup
+    runs-on: ubuntu-latest
+    needs: sync
+    if: success()
+
+    steps:
+      - name: Create backup on remote
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.REMOTE_HOST }}
+          username: ${{ env.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+
+            echo "Creating backup..."
+            BACKUP_DIR="${{ env.REMOTE_PATH }}/backups/daily"
+            mkdir -p "$BACKUP_DIR"
+
+            # Create workspace backup
+            tar -czf "$BACKUP_DIR/workspace-$(date +%Y%m%d-%H%M%S).tar.gz" \
+              "${{ env.REMOTE_PATH }}/workspace"
+
+            # Keep only last 7 days
+            find "$BACKUP_DIR" -name "workspace-*.tar.gz" -mtime +7 -delete
+
+            echo "✅ Backup created"

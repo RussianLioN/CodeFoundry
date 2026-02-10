@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "projectName": "{{ project_name }}",
+  "projectType": "{{ archetype }}",
+  "autoRouting": {
+    "enabled": true,
+    "rulesPath": ".claude/auto-routing-rules.json",
+    "fallbackAgent": "coordinator"
+  },
+  "agents": {
+    "registryPath": ".claude/AGENTS.md",
+    "agentsDir": ".claude/agents/",
+    "defaultAgent": "coordinator"
+  },
+  "git": {
+    "enabled": true,
+    "defaultBranch": "main",
+    "autoCommit": false
+  },
+  "testing": {
+    "enabled": true,
+    "framework": "{{ test_framework | default('pytest') }}",
+    "runOnCreate": false
+  }
+}

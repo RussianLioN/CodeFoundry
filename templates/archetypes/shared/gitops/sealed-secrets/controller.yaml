@@ -1,0 +1,187 @@
+# SealedSecrets Controller
+# Bitnami SealedSecrets controller for Kubernetes
+# Encrypts Kubernetes Secrets into SealedSecrets that are safe to store in Git
+
+---
+## Quick Install
+## To install SealedSecrets, run:
+## kubectl apply -f https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.0/controller.yaml
+
+---
+
+## Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+  labels:
+    name: kube-system
+
+---
+## Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sealed-secrets-controller
+  namespace: kube-system
+
+---
+## Cluster Role (for managing secrets)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: secrets-unsealer
+rules:
+- apiGroups:
+  - bitnami.com
+  resources:
+  - sealedsecrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - bitnami.com
+  resources:
+  - sealedsecrets/status
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+
+---
+## Cluster Role Binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sealed-secrets-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: secrets-unsealer
+subjects:
+- kind: ServiceAccount
+  name: sealed-secrets-controller
+  namespace: kube-system
+
+---
+## Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sealed-secrets-controller
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: sealed-secrets
+    app.kubernetes.io/instance: sealed-secrets
+    app.kubernetes.io/component: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sealed-secrets
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sealed-secrets
+        app.kubernetes.io/instance: sealed-secrets
+        app.kubernetes.io/component: controller
+    spec:
+      serviceAccountName: sealed-secrets-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: sealed-secrets-controller
+        image: bitnami/sealed-secrets-controller:v0.24.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - --key-prefix
+        - bitnami.com
+        - --key-size
+        - "4096"
+        env:
+        - name: SEALED_SECRETS_LOG_LEVEL
+          value: info
+        - name: PORT
+          value: "8080"
+        ports:
+        - name: http
+          containerPort: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir: {}
+
+---
+## Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: sealed-secrets-controller
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: sealed-secrets
+spec:
+  ports:
+  - port: 8080
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: sealed-secrets
+
+---
+## Note about certificate generation
+## On first start, the controller will generate a new RSA key pair and
+## create a secret named 'sealed-secrets-key' in the kube-system namespace.
+##
+## IMPORTANT: Back up this key! Without it, you cannot decrypt your sealed secrets.
+##
+## To back up the key:
+## kubectl get secret -n kube-system sealed-secrets-key -o yaml > sealed-secrets-key-backup.yaml
+##
+## To restore the key:
+## kubectl apply -f sealed-secrets-key-backup.yaml

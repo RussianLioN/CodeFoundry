@@ -1,0 +1,65 @@
+agents:
+- config: {}
+  enabled: true
+  id: coordinator
+  model: gpt-4
+  name: Coordinator
+  role: Orchestrator of all agents
+  specialization: Agent coordination
+  template: coordinator
+  trigger:
+  - coordinate
+  - orchestrate
+- config: {}
+  enabled: true
+  id: code_assistant
+  model: gpt-4
+  name: Code Assistant
+  role: Code writing specialist
+  specialization: Code generation
+  template: code-assistant
+  trigger:
+  - write
+  - create
+  - implement
+- config: {}
+  enabled: true
+  id: reviewer
+  model: gpt-4
+  name: Code Reviewer
+  role: Code review specialist
+  specialization: Quality assurance
+  template: reviewer
+  trigger:
+  - review
+  - check
+- config: {}
+  enabled: true
+  id: tester
+  model: gpt-4
+  name: QA Tester
+  role: Testing specialist
+  specialization: Test generation
+  template: tester
+  trigger:
+  - test
+  - verify
+- config:
+    research_doc: docs/research/ollama-gemini3-flash-deployment.md
+    sources:
+    - https://ollama.com/library/gemini-3-flash-preview
+    - https://docs.ollama.com/api/authentication
+    - https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/3-flash
+  enabled: true
+  id: ollama-gemini-researcher
+  model: gpt-4
+  name: Ollama Gemini Researcher
+  role: OpenClaw + Ollama deployment specialist
+  specialization: Research agent for gemini-3-flash-preview deployment
+  template: research
+  trigger:
+  - ollama
+  - gemini
+  - docker.*deploy
+  - telegram.*bot
+  - remote.*server

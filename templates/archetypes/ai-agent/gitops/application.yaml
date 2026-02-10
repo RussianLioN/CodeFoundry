@@ -1,0 +1,59 @@
+# ArgoCD Application for AI Agent
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-agent
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: ai-agent
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/ai-agent/k8s/overlays/production
+    kustomize:
+      images:
+      - name: ai-agent
+        newTag: latest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-agent
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+      - /spec/replicas
+
+---
+# Staging
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ai-agent-staging
+  namespace: argocd
+  labels:
+    environment: staging
+spec:
+  project: staging
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/ai-agent/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ai-agent-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

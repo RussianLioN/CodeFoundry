@@ -1,0 +1,62 @@
+# ArgoCD Application for Fullstack
+# Deploys both frontend and backend components
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fullstack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: fullstack
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/fullstack/k8s/overlays/production
+    kustomize:
+      images:
+      - name: web
+        newTag: latest
+      - name: api
+        newTag: latest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fullstack
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+      - /spec/replicas
+
+---
+# Staging
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fullstack-staging
+  namespace: argocd
+  labels:
+    environment: staging
+spec:
+  project: staging
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/fullstack/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fullstack-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

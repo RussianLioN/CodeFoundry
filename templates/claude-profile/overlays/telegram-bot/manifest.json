@@ -1,0 +1,35 @@
+{
+  "archetype": "telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot profile (aiogram)",
+  "extends": "base",
+  "agents": {
+    "add": [],
+    "remove": [],
+    "configure": {
+      "code-assistant": {
+        "specialization": "aiogram handlers, FSM, inline keyboards, webhook/polling",
+        "languages": ["python"]
+      }
+    }
+  },
+  "skills": {
+    "add": ["bot-development"]
+  },
+  "commands": {
+    "add": ["deploy"]
+  },
+  "routing": {
+    "overrides": {
+      "handler|command|callback|fsm|state|keyboard": "code-assistant",
+      "webhook|polling|bot api|telegram": "code-assistant"
+    }
+  },
+  "variables": {
+    "default_language": "python",
+    "default_framework": "aiogram",
+    "test_framework": "pytest",
+    "docker_enabled": true,
+    "k8s_enabled": false
+  }
+}

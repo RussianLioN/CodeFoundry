@@ -1,0 +1,226 @@
+# =============================================================================
+# CodeFoundry Remote Testing - Alert Rules
+# =============================================================================
+# Prometheus alert rules for testing infrastructure
+#
+# Alert categories:
+#   - Container health
+#   - Resource usage
+#   - Test execution
+#   - System metrics
+# =============================================================================
+
+groups:
+  # -----------------------------------------------------------------------------
+  # Container Health Alerts
+  # -----------------------------------------------------------------------------
+  - name: container_health
+    interval: 30s
+    rules:
+      - alert: ContainerDown
+        expr: up{job=~"codefoundry-.*"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: container
+        annotations:
+          summary: "Container {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} container has been down for more than 2 minutes"
+
+      - alert: ContainerUnhealthy
+        expr: up{job=~"codefoundry-.*"} == 1 and health_status{job=~"codefoundry-.*"} != "healthy"
+        for: 5m
+        labels:
+          severity: warning
+          category: container
+        annotations:
+          summary: "Container {{ $labels.instance }} is unhealthy"
+          description: "{{ $labels.job }} container health check is failing"
+
+      - alert: ContainerRestarting
+        expr: rate(container_tasks_state{state="running"}[5m]) < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          category: container
+        annotations:
+          summary: "Container {{ $labels.instance }} is restarting frequently"
+          description: "Container has been restarting more than expected"
+
+  # -----------------------------------------------------------------------------
+  # Resource Usage Alerts
+  # -----------------------------------------------------------------------------
+  - name: resource_usage
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90% for 5 minutes"
+
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for 10 minutes"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          category: resources
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is below 10% on root filesystem"
+
+  # -----------------------------------------------------------------------------
+  # Test Execution Alerts
+  # -----------------------------------------------------------------------------
+  - name: test_execution
+    interval: 30s
+    rules:
+      - alert: TestFailureRate
+        expr: (rate(test_failures_total[15m]) / rate(test_runs_total[15m])) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          category: testing
+        annotations:
+          summary: "High test failure rate"
+          description: "Test failure rate is above 30% for 5 minutes"
+
+      - alert: TestExecutionTimeout
+        expr: test_duration_seconds{quantile="0.95"} > 300
+        for: 10m
+        labels:
+          severity: warning
+          category: testing
+        annotations:
+          summary: "Tests are taking too long"
+          description: "95th percentile test duration is above 5 minutes"
+
+      - alert: NoTestExecution
+        expr: time() - max(test_last_run_timestamp) > 3600
+        labels:
+          severity: info
+          category: testing
+        annotations:
+          summary: "No tests executed in the last hour"
+          description: "Last test run was over 1 hour ago"
+
+  # -----------------------------------------------------------------------------
+  # Gateway Alerts
+  # -----------------------------------------------------------------------------
+  - name: gateway_health
+    interval: 30s
+    rules:
+      - alert: GatewayDown
+        expr: up{job="codefoundry-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: gateway
+        annotations:
+          summary: "Gateway is down"
+          description: "OpenClaw Gateway is not responding"
+
+      - alert: GatewayHighConnections
+        expr: gateway_active_connections > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: gateway
+        annotations:
+          summary: "High number of active connections"
+          description: "Gateway has {{ $value }} active connections"
+
+      - alert: GatewayErrorRate
+        expr: (rate(gateway_errors_total[5m]) / rate(gateway_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: gateway
+        annotations:
+          summary: "High gateway error rate"
+          description: "Gateway error rate is above 5%"
+
+  # -----------------------------------------------------------------------------
+  # Telegram Bot Alerts
+  # -----------------------------------------------------------------------------
+  - name: telegram_bot_health
+    interval: 30s
+    rules:
+      - alert: TelegramBotDown
+        expr: up{job="codefoundry-telegram-bot"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: bot
+        annotations:
+          summary: "Telegram Bot is down"
+          description: "Telegram Bot container is not responding"
+
+      - alert: TelegramBotAPIErrors
+        expr: rate(telegram_bot_api_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: bot
+        annotations:
+          summary: "High Telegram API error rate"
+          description: "Telegram API error rate is above 0.1 errors/sec"
+
+      - alert: NoTelegramActivity
+        expr: time() - max(telegram_bot_last_message_timestamp) > 7200
+        labels:
+          severity: info
+          category: bot
+        annotations:
+          summary: "No Telegram activity in 2 hours"
+          description: "Last Telegram message was over 2 hours ago"
+
+  # -----------------------------------------------------------------------------
+  # System Alerts
+  # -----------------------------------------------------------------------------
+  - name: system_health
+    interval: 30s
+    rules:
+      - alert: HostDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Host is down"
+          description: "Node exporter is not responding from {{ $labels.instance }}"
+
+      - alert: HighSystemLoad
+        expr: node_load15 > 4
+        for: 10m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High system load"
+          description: "15-minute load average is {{ $value }}"
+
+      - alert: NetworkIssues
+        expr: rate(node_network_receive_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "Network errors detected"
+          description: "Network receive error rate is elevated"

@@ -1,0 +1,148 @@
+# =============================================================================
+# CodeFoundry Remote Testing - Prometheus Configuration
+# =============================================================================
+# Metrics collection for ainetic.tech testing infrastructure
+#
+# Metrics collected:
+#   - Container start/stop rate
+#   - Test execution time
+#   - Resource usage (CPU, memory, disk)
+#   - Health check status
+#   - Docker daemon metrics
+#
+# Usage:
+#   docker-compose -f server/prometheus/docker-compose.yml up -d
+#   Access: http://ainetic.tech:9090
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'codefoundry-test'
+    environment: 'testing'
+    server: 'ainetic-tech'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            # - alertmanager:9093
+
+# Rule files
+rule_files:
+  # - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # -----------------------------------------------------------------------------
+  # Prometheus self-monitoring
+  # -----------------------------------------------------------------------------
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # -----------------------------------------------------------------------------
+  # Docker Daemon Metrics
+  # -----------------------------------------------------------------------------
+  # Requires cAdvisor to be running
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'docker'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: cadvisor:8080
+
+  # -----------------------------------------------------------------------------
+  # Node Exporter - System metrics
+  # -----------------------------------------------------------------------------
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+
+  # -----------------------------------------------------------------------------
+  # CodeFoundry Gateway
+  # -----------------------------------------------------------------------------
+  - job_name: 'codefoundry-gateway'
+    static_configs:
+      - targets: ['gateway:18790']
+        labels:
+          service: 'gateway'
+          component: 'websocket-server'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # -----------------------------------------------------------------------------
+  # CodeFoundry Telegram Bot
+  # -----------------------------------------------------------------------------
+  - job_name: 'codefoundry-telegram-bot'
+    static_configs:
+      - targets: ['telegram-bot:3000']
+        labels:
+          service: 'telegram-bot'
+          component: 'bot'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # -----------------------------------------------------------------------------
+  # CodeFoundry Test Runner
+  # -----------------------------------------------------------------------------
+  - job_name: 'codefoundry-test-runner'
+    static_configs:
+      - targets: ['test-runner:9100']
+        labels:
+          service: 'test-runner'
+          component: 'test-execution'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # -----------------------------------------------------------------------------
+  # Ollama (if enabled)
+  # -----------------------------------------------------------------------------
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama:11434']
+        labels:
+          service: 'ollama'
+          component: 'ai-inference'
+    metrics_path: '/metrics'
+    scrape_interval: 60s
+
+# =============================================================================
+# Storage configuration
+# =============================================================================
+
+storage:
+  tsdb:
+    path: /prometheus/data
+    retention.time: 7d
+    retention.size: 1GB
+
+# =============================================================================
+# Tracing configuration (optional)
+# =============================================================================
+
+# tracing:
+#   endpoint: "localhost:4318"
+#   client_type: "grpc"
+#   headers:
+#     X-Trace-Header: "codefoundry"
+
+# =============================================================================
+# Web configuration
+# =============================================================================
+
+# web:
+#   enable_admin_api: false
+#   enable_lifecycle: false

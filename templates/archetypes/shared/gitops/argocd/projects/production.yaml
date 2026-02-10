@@ -1,0 +1,97 @@
+# ArgoCD Production Project
+# Production environment with strict policies and manual approvals
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: production
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+    environment: production
+spec:
+  description: Production environment for CodeFoundry applications
+
+  # Only allow CodeFoundry repository
+  sourceRepos:
+  - https://github.com/RussianLioN/CodeFoundry
+
+  # Production destinations
+  destinations:
+  - namespace: '*-prod'
+    server: https://kubernetes.default.svc
+  - namespace: '*-production'
+    server: https://kubernetes.default.svc
+  # Add remote production clusters:
+  # - namespace: '*-prod'
+  #   server: https://prod-cluster.example.com
+
+  # Whitelist specific resources for production
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: 'apps'
+    kind: Deployment
+  - group: 'apps'
+    kind: StatefulSet
+  - group: 'apps'
+    kind: DaemonSet
+  - group: 'networking.k8s.io'
+    kind: Ingress
+  - group: 'networking.k8s.io'
+    kind: NetworkPolicy
+  - group: ''
+    kind: Service
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Secret
+  - group: 'autoscaling'
+    kind: HorizontalPodAutoscaler
+  - group: 'policy'
+    kind: PodDisruptionBudget
+
+  # Blacklist dangerous resources
+  namespaceResourceBlacklist:
+  - group: ''
+    kind: ResourceQuota
+  - group: ''
+    kind: LimitRange
+
+  # Production sync window (only during business hours)
+  syncWindows:
+  - kind: allow
+    schedule: '0 9 * * 1-5'  # 9am UTC, Mon-Fri
+    duration: 12h
+    applications:
+    - '*'
+    namespaces:
+    - '*-prod'
+    - '*-production'
+    manualSync: false
+
+  # Strict sync policy for production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=false  # Namespaces must exist
+    - PruneLast=true  # Prune resources last
+    - Validate=true  # Validate manifests
+    retry:
+      limit: 3  # Fewer retries in production
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 15m
+
+  # Require approval for production changes
+  signatureKeys:
+  - keyid: github.com/RussianLioN
+    # Add your public key here
+    # publickey: |
+    #   -----BEGIN PUBLIC KEY-----
+    #   ...
+    #   -----END PUBLIC KEY-----

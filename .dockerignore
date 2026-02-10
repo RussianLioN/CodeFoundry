@@ -1,0 +1,56 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# .dockerignore for System Prompts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# CI/CD
+.github
+
+# Documentation (will be in container)
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Node modules (if any)
+node_modules
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg
+*.egg-info
+dist
+build
+.eggs
+.pytest_cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+tmp
+temp
+
+# Workspace (mounted as volume)
+/workspace

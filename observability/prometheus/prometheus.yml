@@ -1,0 +1,76 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Prometheus Configuration for System Prompts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'system-prompts'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - alertmanager:9093
+
+# Rule files
+rule_files:
+  - 'alerts/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # System Prompts Meta-Generator
+  # ────────────────────────────────────────────────────────────────────────────────
+  - job_name: 'system-prompts'
+    static_configs:
+      - targets: ['localhost:9090']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'meta-generator'
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # GitHub Actions Metrics (via webhook)
+  # ────────────────────────────────────────────────────────────────────────────────
+  - job_name: 'github-actions'
+    static_configs:
+      - targets: ['localhost:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'ci'
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Docker Containers
+  # ────────────────────────────────────────────────────────────────────────────────
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'docker-daemon'
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Node Exporter (system metrics)
+  # ────────────────────────────────────────────────────────────────────────────────
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'localhost'
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Recording Rules
+# ────────────────────────────────────────────────────────────────────────────────
+# Enable the experimental recording rules feature
+# and specify the rules to use.
+
+# remote_write:
+#   - url: http://remote-storage:9009/api/v1/write

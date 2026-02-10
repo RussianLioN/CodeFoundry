@@ -1,0 +1,177 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# CI Pipeline for CLI Tool
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Go Job
+  # ────────────────────────────────────────────────────────────────────────────────
+  go-test:
+    name: Go Test
+    runs-on: ubuntu-latest
+    if: hashFiles('**/*.go') != ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.out
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+
+  go-build:
+    name: Go Build
+    runs-on: ubuntu-latest
+    if: hashFiles('**/*.go') != ''
+    needs: go-test
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          output=mycli-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then output=$output.exe; fi
+          go build -ldflags="-s -w" -o $output .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mycli-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: mycli-*
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Python Job
+  # ────────────────────────────────────────────────────────────────────────────────
+  python-test:
+    name: Python Test
+    runs-on: ubuntu-latest
+    if: hashFiles('**/*.py') != ''
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run tests
+        run: pytest tests/ -v --cov=src --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+
+      - name: Lint
+        run: |
+          ruff check src/
+          mypy src/
+
+  python-build:
+    name: Python Build
+    runs-on: ubuntu-latest
+    if: hashFiles('**/*.py') != ''
+    needs: python-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build
+        run: python -m build
+
+      - name: Check package
+        run: twine check dist/*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Docker Job
+  # ────────────────────────────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: false
+          tags: mycli:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test container
+        run: |
+          docker run --rm mycli:latest --version

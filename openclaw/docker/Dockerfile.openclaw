@@ -1,0 +1,101 @@
+# OpenClaw Gateway Dockerfile
+#
+# Multi-stage build for optimal image size
+#
+# Usage:
+#   docker build -f Dockerfile.openclaw -t openclaw/gateway:latest .
+#
+# Run:
+#   docker run -p 18789:18789 openclaw/gateway:latest
+
+# ============================================================
+# Stage 1: Dependencies
+# ============================================================
+FROM node:20-alpine AS dependencies
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    git
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# ============================================================
+# Stage 2: Build
+# ============================================================
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+# Copy dependencies from previous stage
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Copy source code
+COPY . .
+
+# Build TypeScript (if applicable)
+RUN if [ -f tsconfig.json ]; then \
+        npm run build; \
+    fi
+
+# ============================================================
+# Stage 3: Production
+# ============================================================
+FROM node:20-alpine AS production
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    curl \
+    bash \
+    git \
+    python3 \
+    ffmpeg \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S openclaw && \
+    adduser -u 1001 -S openclaw -G openclaw
+
+WORKDIR /app
+
+# Copy from build stage
+COPY --from=build --chown=openclaw:openclaw /app .
+
+# Create directories
+RUN mkdir -p \
+    /app/logs \
+    /app/tmp \
+    /workspace \
+    && chown -R openclaw:openclaw \
+        /app/logs \
+        /app/tmp \
+        /workspace
+
+# Switch to non-root user
+USER openclaw
+
+# Expose ports
+# 18789 - Gateway WebSocket
+# 18790 - Health check
+EXPOSE 18789 18790
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:18790/health || exit 1
+
+# Set environment
+ENV NODE_ENV=production \
+    GATEWAY_PORT=18789 \
+    GATEWAY_HOST=0.0.0.0
+
+# Start the gateway
+CMD ["node", "dist/gateway.js"]

@@ -1,0 +1,163 @@
+# GitOps PR Review Workflow
+# Creates preview environments for pull requests
+# Each PR gets its own isolated environment for testing
+
+name: GitOps PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.event.repository.name }}
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview Environment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract PR number
+        id: pr-number
+        run: |
+          PR_NUMBER="${{ github.event.number }}"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "📌 PR #$PR_NUMBER"
+
+      - name: Build and push image
+        id: build-image
+        run: |
+          # Build image with PR number tag
+          IMAGE_TAG="pr-${{ steps.pr-number.outputs.pr_number }}-${{ github.sha }}"
+
+          echo "📦 Building image: $IMAGE_TAG"
+
+          # TODO: Replace with actual build command
+          # docker build -t "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}" .
+          # docker push "${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create preview namespace
+        run: |
+          PREVIEW_NS="preview-pr-${{ steps.pr-number.outputs.pr_number }}"
+
+          # Create preview namespace
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: $PREVIEW_NS
+            labels:
+              app.kubernetes.io/part-of: codefoundry
+              pr: "${{ steps.pr-number.outputs.pr_number }}"
+              environment: preview
+          EOF
+
+      - name: Deploy preview application
+        env:
+          IMAGE_TAG: ${{ steps.build-image.outputs.image_tag }}
+          PR_NUMBER: ${{ steps.pr-number.outputs.pr_number }}
+        run: |
+          PREVIEW_NS="preview-pr-${PR_NUMBER}"
+
+          # Find archetype directories
+          for archetype_dir in templates/archetypes/*/k8s/overlays/production; do
+            archetype=$(basename $(dirname $(dirname $(dirname "$archetype_dir"))))
+
+            if [ ! -d "$archetype_dir" ]; then
+              continue
+            fi
+
+            echo "🚀 Deploying $archetype preview to $PREVIEW_NS..."
+
+            # Update kustomization to use preview namespace
+            kubectl apply -k "$archetype_dir" \
+              --namespace "$PREVIEW_NS" \
+              --context "preview-pr-$PR_NUMBER"
+          done
+
+      - name: Comment PR with preview URL
+        uses: actions/github-script@v7
+        if: success()
+        with:
+          script: |
+            const prNumber = '${{ steps.pr-number.outputs.pr_number }}';
+            const comment = `## 🚀 Preview Environment Deployed!
+
+            Your preview environment is ready for testing.
+
+            **Namespace:** \`preview-pr-${prNumber}\`
+            **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build-image.outputs.image_tag }}\`
+
+            ### Access Preview
+
+            You can access the preview environment using:
+            \`\`\`bash
+            kubectl config use-context preview-pr-${prNumber}
+            kubectl get svc -n preview-pr-${prNumber}
+            \`\`\`
+
+            The preview will be automatically destroyed when this PR is closed.
+
+            ---
+            <sub>🤖 Deployed by GitOps PR Review workflow</sub>`;
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+  cleanup-preview:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+
+    steps:
+      - name: Delete preview namespace
+        run: |
+          PR_NUMBER="${{ github.event.number }}"
+          PREVIEW_NS="preview-pr-${PR_NUMBER}"
+
+          echo "🧹 Cleaning up preview environment: $PREVIEW_NS"
+
+          # Delete preview namespace
+          kubectl delete namespace "$PREVIEW_NS" --ignore-not-found=true
+
+      - name: Remove PR comment (optional)
+        uses: actions/github-script@v7
+        if: success()
+        with:
+          script: |
+            const prNumber = '${{ github.event.number }}';
+
+            // Find and update the preview comment
+            const comments = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: prNumber
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview Environment Deployed')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: botComment.id,
+                body: '## 🧹 Preview Environment Cleaned Up\n\nThe preview environment has been removed.'
+              });
+            }

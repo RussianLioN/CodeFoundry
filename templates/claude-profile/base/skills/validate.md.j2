@@ -1,0 +1,17 @@
+# Skill: Validate Project
+
+## Contract
+- **Input:** Project directory path
+- **Output:** Validation report (pass/fail per check)
+- **Stateless:** Yes
+- **Side effects:** None
+
+## Checks
+1. Required files exist: README.md, {{ 'pyproject.toml' if language == 'python' else 'package.json' if language in ['typescript', 'javascript'] else 'go.mod' if language == 'go' else 'Cargo.toml' if language == 'rust' else 'README.md' }}
+2. Git initialized and clean
+3. No secrets in tracked files (.env, credentials, API keys)
+4. {{ test_framework | default('pytest') }} config present
+{% if docker_enabled %}5. Dockerfile exists and is valid{% endif %}
+
+## Usage
+Invoke when: before commit, before deploy, on health check.

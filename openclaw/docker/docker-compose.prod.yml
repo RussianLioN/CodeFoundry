@@ -1,0 +1,314 @@
+# OpenClaw Production Docker Compose
+#
+# Override file for remote server deployment
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: "3.8"
+
+# This file extends the base docker-compose.yml with production settings
+# Focus: Remote server volumes, resource limits, and production optimizations
+
+services:
+  # ============================================================
+  # Ollama Service - Production configuration
+  # ============================================================
+  ollama-service:
+    volumes:
+      # Persist models in server directory
+      - /opt/openclaw/data/ollama:/root/.ollama
+
+      # Custom models configuration
+      - ./ollama/modelfile:/models/modelfile:ro
+
+    environment:
+      # Production-specific settings
+      - OLLAMA_KEEP_ALIVE=60m  # Longer keep-alive for production
+      - OLLAMA_NUM_PARALLEL=8  # More parallel requests
+      - OLLAMA_MAX_QUEUE=20
+      - OLLAMA_LOAD_TIMEOUT=10m
+
+    deploy:
+      resources:
+        limits:
+          cpus: "6"  # More CPU for production
+          memory: 16G
+        reservations:
+          cpus: "2"
+          memory: 8G
+
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 3
+      window: 120s
+
+  # ============================================================
+  # OpenClaw Gateway - Production configuration
+  # ============================================================
+  openclaw-gateway:
+    volumes:
+      # Server workspace directory
+      - /opt/openclaw/workspace:/workspace
+
+      # Agent configurations (read-only)
+      - ./workspace/agents:/workspace/agents:ro
+      - ./workspace/skills:/workspace/skills:ro
+
+      # OpenClaw configuration
+      - ./config/openclaw.json:/app/config/openclaw.json:ro
+
+      # Logs with rotation
+      - /opt/openclaw/logs/gateway:/app/logs
+
+      # Temp files
+      - /opt/openclaw/tmp:/app/tmp
+
+    environment:
+      # Production environment
+      - NODE_ENV=production
+
+      # Ollama connection
+      - OLLAMA_BASE_URL=http://ollama-service:11434
+      - OLLAMA_MODEL=gemini-3-flash
+
+      # Session settings (longer for production)
+      - SESSION_TIMEOUT=7200000  # 2 hours
+      - MAX_SESSIONS=500
+
+      # Logging
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+
+      # Workspace (server path)
+      - WORKSPACE_DIR=/opt/openclaw/workspace
+      - PROJECTS_DIR=/opt/openclaw/workspace/projects
+
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18790/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ============================================================
+  # Telegram Bot - Production configuration
+  # ============================================================
+  telegram-bot:
+    volumes:
+      # Bot data for persistence
+      - /opt/openclaw/data/bot:/bot/data
+
+      # Bot logs
+      - /opt/openclaw/logs/bot:/app/logs
+
+    environment:
+      # Production environment
+      - NODE_ENV=production
+
+      # Telegram Bot Token (from .env)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+
+      # Authorization
+      - AUTHORIZED_USER_IDS=${AUTHORIZED_USER_IDS}
+
+      # Gateway connection
+      - GATEWAY_URL=ws://openclaw-gateway:18789
+      - GATEWAY_RECONNECT_INTERVAL=5000
+      - GATEWAY_MAX_RECONNECT=100  # More retries in production
+
+      # Session settings
+      - SESSION_TIMEOUT=7200000  # 2 hours
+
+      # Logging
+      - LOG_LEVEL=info
+
+      # Workspace (server path)
+      - WORKSPACE_DIR=/opt/openclaw/workspace
+      - PROJECTS_DIR=/opt/openclaw/workspace/projects
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+        window: 120s
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ============================================================
+  # Redis (NEW) - Session persistence
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: openclaw-redis
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes --appendfsync everysec
+
+    volumes:
+      - /opt/openclaw/data/redis:/data
+
+    environment:
+      - REDIS_MAXMEMORY=256mb
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+    networks:
+      - openclaw-network
+
+  # ============================================================
+  # Prometheus (NEW) - Metrics collection
+  # ============================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: openclaw-prometheus
+    restart: unless-stopped
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /opt/openclaw/data/prometheus:/prometheus
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+    networks:
+      - openclaw-network
+
+    profiles:
+      - monitoring
+
+  # ============================================================
+  # Grafana (NEW) - Metrics dashboard
+  # ============================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: openclaw-grafana
+    restart: unless-stopped
+
+    volumes:
+      - /opt/openclaw/data/grafana:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SERVER_ROOT_URL=https://openclaw.example.com/grafana
+      - GF_INSTALL_PLUGINS=
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+    networks:
+      - openclaw-network
+
+    profiles:
+      - monitoring
+
+# Named volumes for data persistence (if not using bind mounts)
+volumes:
+  ollama_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/openclaw/data/ollama
+
+  workspace_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/openclaw/workspace
+
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/openclaw/data/redis
+
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/openclaw/data/prometheus
+
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/openclaw/data/grafana
+
+# Networks
+networks:
+  openclaw-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+    driver_opts:
+      com.docker.network.bridge.name: openclaw-br0

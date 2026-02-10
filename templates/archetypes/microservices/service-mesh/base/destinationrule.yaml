@@ -1,0 +1,111 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Istio Destination Rule - Circuit Breakers & Subsets
+# ═══════════════════════════════════════════════════════════════════════════════
+
+---
+# User Service
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: user-service
+spec:
+  host: user-service
+  trafficPolicy:
+    # Circuit Breaker
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+        maxRetries: 3
+    # Outlier Detection (automatic host eviction)
+    outlierDetection:
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 40
+    # Load Balancing
+    loadBalancer:
+      simple: LEAST_CONN
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+
+---
+# Order Service
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: order-service
+spec:
+  host: order-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 50
+      http:
+        http2MaxRequests: 50
+    outlierDetection:
+      consecutiveGatewayErrors: 5
+      interval: 60s
+      baseEjectionTime: 60s
+    loadBalancer:
+      simple: ROUND_ROBIN
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+
+---
+# Auth Service
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: auth-service
+spec:
+  host: auth-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200  # Higher for auth (frequent requests)
+      http:
+        http2MaxRequests: 200
+    loadBalancer:
+      simple: RANDOM
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+
+---
+# Payment Service
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: payment-service
+spec:
+  host: payment-service
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 30
+      http:
+        http2MaxRequests: 30
+    outlierDetection:
+      consecutive5xxErrors: 3  # More aggressive for payments
+      interval: 30s
+      baseEjectionTime: 60s
+    loadBalancer:
+      consistentHash:
+        httpHeaderName: x-user-id  # Stick user to same payment instance
+  subsets:
+  - name: v1
+    labels:
+      version: v1

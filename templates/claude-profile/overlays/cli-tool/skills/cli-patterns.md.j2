@@ -1,0 +1,32 @@
+# Skill: CLI Patterns
+
+## Contract
+- **Input:** CLI feature requirement (command, flag, subcommand)
+- **Output:** Implementation with help text and shell completion
+- **Stateless:** Yes
+
+## Patterns by Language
+
+### Go (Cobra)
+- Root command + subcommands
+- Persistent flags vs local flags
+- Bash/Zsh/Fish completion generation
+- Viper for config file support
+
+### Python (Typer/Click)
+- Type-annotated arguments
+- Auto-generated help
+- Rich output formatting
+- Config via `~/.config/{app}/config.toml`
+
+### Rust (Clap)
+- Derive macro for argument parsing
+- Enum-based subcommands
+- Colored output (ansi_term)
+- Cross-compilation targets
+
+## Conventions
+- Exit code 0 = success, 1 = error, 2 = usage error
+- Stderr for errors, stdout for data (pipeable)
+- `--json` flag for machine-readable output
+- `--verbose` / `--quiet` flags for log verbosity

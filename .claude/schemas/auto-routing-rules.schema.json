@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CodeFoundry Auto-Routing Rules",
+  "description": "Schema for multi-agent routing configuration",
+  "type": "object",
+  "required": ["version", "rules", "fallbackRules"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      },
+      "minItems": 1
+    },
+    "fallbackRules": {
+      "$ref": "#/$defs/fallbackRules"
+    },
+    "contextHints": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": ["id", "name", "priority", "agent", "triggers"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]+$",
+          "description": "Unique rule identifier in kebab-case"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable rule name"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Rule priority (higher = more important)"
+        },
+        "agent": {
+          "type": "string",
+          "enum": [
+            "system",
+            "token-optimizer",
+            "tasks-sync",
+            "ollama-gemini-researcher",
+            "backup-coordinator",
+            "code_assistant",
+            "reviewer",
+            "documentation-agent"
+          ],
+          "description": "Agent name — must match .claude/agents/{name}.md or 'system'"
+        },
+        "command": {
+          "type": "string",
+          "description": "CLI command (for system agent)"
+        },
+        "triggers": {
+          "$ref": "#/$defs/triggers"
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "triggers": {
+      "type": "object",
+      "required": ["keywords"],
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "fallbackRules": {
+      "type": "object",
+      "required": ["defaultAgent", "confidenceThreshold"],
+      "properties": {
+        "defaultAgent": {
+          "type": "string"
+        },
+        "confidenceThreshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "allowMultipleAgents": {
+          "type": "boolean"
+        },
+        "maxAgentsPerRequest": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# ArgoCD Application for Presentation
+# Note: Presentations are typically static sites
+# This can be used for deploying to static hosting via Ingress
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: presentation
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: presentation
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/presentation/k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: presentation
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

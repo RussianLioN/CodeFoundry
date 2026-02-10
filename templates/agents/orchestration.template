@@ -1,0 +1,196 @@
+# {{ project_name }} - Agent Orchestration
+
+> Generated: {{ creation_date }}
+> Project Type: {{ project_type }}
+> Version: {{ version }}
+
+---
+
+## Overview
+
+This project uses a **multi-agent system** where specialized AI agents handle different aspects of development work.
+
+**Agent Count:** {{ agents | length }}
+
+---
+
+## Agent Registry
+
+{% for agent in agents %}
+### {{ agent.id }}
+
+- **Name:** {{ agent.name }}
+- **File:** `{{ agent.file }}`
+- **Role:** {{ agent.role if agent.role is defined else "Specialized agent" }}
+
+{% endfor %}
+
+---
+
+## Agent Routing
+
+```yaml
+routing:
+  default: coordinator
+
+  # By keywords
+  keyword_routing:
+    "напиши|создай|рефактори|код": code_assistant
+    "ревью|review|проверь код": reviewer
+    "документация|docs|док": documentation
+    "тест|test|проверка": tester
+    "отладь|debug|ошибка|баг": debugger
+
+  # By explicit command
+  command_routing:
+    "/agent <agent_id>": route_to_specific_agent
+
+  # By task type
+  task_routing:
+    code_writing: code_assistant
+    review: reviewer
+    documentation: documentation
+    testing: tester
+    debugging: debugger
+```
+
+---
+
+## Usage Patterns
+
+### Automatic Routing
+
+Agents are selected automatically based on keywords:
+
+```
+User: "Напиши функцию для аутентификации"
+→ Code Assistant Agent (matched: "напиши")
+
+User: "Сделай ревью этого PR"
+→ Reviewer Agent (matched: "ревью")
+```
+
+---
+
+### Explicit Selection
+
+You can explicitly select an agent:
+
+```
+/agent code_assistant Create a new module
+/agent reviewer Check the latest commit
+/agent documentation Write API docs
+```
+
+---
+
+### Coordinator Workflow
+
+For complex tasks, the coordinator can orchestrate multiple agents:
+
+```
+User: "Создай и протестируй новый endpoint"
+→ Coordinator
+  → Code Assistant (writes endpoint)
+  → Tester (writes tests)
+  → Reviewer (reviews both)
+→ Result to user
+```
+
+---
+
+## Agent Configuration
+
+Agents are configured in `.codefoundry/agents.yaml`:
+
+```yaml
+agents:
+  - id: coordinator
+    name: Coordinator
+    template: coordinator
+    enabled: true
+    config:
+      coordinator_keywords: ["coordinate", "orchestrate"]
+
+  - id: code_assistant
+    name: Code Assistant
+    template: code-assistant
+    enabled: true
+    config:
+      primary_language: {{ primary_language | default("Python") }}
+      framework: {{ framework | default("None") }}
+```
+
+---
+
+## Modifying Agents
+
+### To Add a New Agent
+
+1. Create agent configuration in `.codefoundry/agents.yaml`
+2. Run generator: `python scripts/generate-agents.py`
+3. Customize generated agent file in `.claude/`
+
+### To Disable an Agent
+
+Edit `.codefoundry/agents.yaml`:
+
+```yaml
+agents:
+  - id: some_agent
+    enabled: false  # Disable this agent
+```
+
+### to Customize an Agent
+
+Edit the agent file directly in `.claude/{agent_id}.md`
+
+**Note:** Direct edits will be preserved unless you regenerate the agent.
+
+---
+
+## Agent Communication
+
+### Agent Handoff
+
+Agents can hand off to each other:
+
+```yaml
+handoff_protocol:
+  from: "current_agent"
+  to: "next_agent"
+  context:
+    conversation_history: [...]
+    current_task: {...}
+    files_worked_on: [...]
+    decisions_made: [...]
+```
+
+### Shared Context
+
+All agents have access to:
+- `PROJECT.md` — Project architecture
+- `TASKS.md` — Task tracking
+- `.CONTEXT_BRIDGE.md` — Meta-context from CodeFoundry
+- Source code (via Read tool)
+
+---
+
+## Version Information
+
+- **Generated:** {{ creation_date }}
+- **Template Version:** {{ template_version }}
+- **Generator:** CodeFoundry Agent Generator
+
+---
+
+## Help
+
+For more information on:
+- **Agent templates:** See `templates/agents/` in CodeFoundry
+- **Agent customization:** Edit agent files directly
+- **Troubleshooting:** Check CodeFoundry documentation
+
+---
+
+> This file is auto-generated. Manual edits will be preserved on regeneration.

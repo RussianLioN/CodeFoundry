@@ -1,0 +1,19 @@
+# Skill: Security Check
+
+## Contract
+- **Input:** Code diff or file path
+- **Output:** Security findings (CRITICAL/WARNING/INFO)
+- **Stateless:** Yes
+
+## Checks
+1. **Injection:** SQL injection, command injection, XSS
+2. **Auth:** Missing authentication, broken authorization
+3. **Secrets:** Hardcoded credentials, API keys in code
+4. **Dependencies:** Known CVEs in packages
+5. **Headers:** Missing security headers (CORS, CSP, HSTS)
+
+## OWASP Top 10 Coverage
+- A01: Broken Access Control
+- A02: Cryptographic Failures
+- A03: Injection
+- A07: Security Misconfiguration

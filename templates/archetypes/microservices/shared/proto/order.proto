@@ -1,0 +1,164 @@
+// ═════════════════════════════════════════════════════════════════════════════
+// Order Service gRPC Definition
+// ═══════════════════════════════════════════════════════════════════════════════
+
+syntax = "proto3";
+
+package order.v1;
+
+option go_package = "shared/pkg/grpc/order/v1;orderv1";
+
+import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Service Definition
+// ────────────────────────────────────────────────────────────────────────────────
+
+service OrderService {
+    rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+    rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+    rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+    rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+    rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Messages
+// ────────────────────────────────────────────────────────────────────────────────
+
+message Order {
+    string id = 1;
+    string user_id = 2 [(validate.rules).string.uuid = true];
+    OrderStatus status = 3;
+    repeated OrderItem items = 4;
+    Money total = 5;
+    Money subtotal = 6;
+    Money tax = 7;
+    Money shipping = 8;
+    Address shipping_address = 9;
+    google.protobuf.Timestamp created_at = 10;
+    google.protobuf.Timestamp updated_at = 11;
+}
+
+message OrderItem {
+    string id = 1;
+    string product_id = 2 [(validate.rules).string.uuid = true];
+    string product_name = 3;
+    int32 quantity = 4 [(validate.rules).int32 = {gte: 1}];
+    Money unit_price = 5;
+    Money total = 6;
+}
+
+message Money {
+    string currency = 1 [(validate.rules).string = {in: ["USD", "EUR", "GBP", "RUB"]}];
+    int64 amount = 2; // Stores in minor units (cents, kopecks, etc.)
+}
+
+message Address {
+    string street = 1;
+    string city = 2;
+    string state = 3;
+    string postal_code = 4;
+    string country = 5;
+}
+
+enum OrderStatus {
+    ORDER_STATUS_UNKNOWN = 0;
+    ORDER_STATUS_PENDING = 1;
+    ORDER_STATUS_CONFIRMED = 2;
+    ORDER_STATUS_PROCESSING = 3;
+    ORDER_STATUS_SHIPPED = 4;
+    ORDER_STATUS_DELIVERED = 5;
+    ORDER_STATUS_CANCELLED = 6;
+    ORDER_STATUS_REFUNDED = 7;
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Request/Response Messages
+// ────────────────────────────────────────────────────────────────────────────────
+
+message CreateOrderRequest {
+    string user_id = 1 [(validate.rules).string.uuid = true];
+    repeated CreateOrderItem items = 2 [(validate.rules).repeated.min_items = 1];
+    Address shipping_address = 3;
+}
+
+message CreateOrderItem {
+    string product_id = 1 [(validate.rules).string.uuid = true];
+    int32 quantity = 2 [(validate.rules).int32 = {gte: 1}];
+}
+
+message CreateOrderResponse {
+    Order order = 1;
+}
+
+message GetOrderRequest {
+    string id = 1 [(validate.rules).string.uuid = true];
+}
+
+message GetOrderResponse {
+    Order order = 1;
+}
+
+message ListOrdersRequest {
+    string user_id = 1 [(validate.rules).string.uuid = true];
+    OrderStatus status = 2;
+    int32 page_size = 3 [(validate.rules).int32 = {gte: 1, lte: 100}];
+    string page_token = 4;
+}
+
+message ListOrdersResponse {
+    repeated Order orders = 1;
+    string next_page_token = 2;
+    int32 total_count = 3;
+}
+
+message UpdateOrderStatusRequest {
+    string id = 1 [(validate.rules).string.uuid = true];
+    OrderStatus status = 2;
+}
+
+message UpdateOrderStatusResponse {
+    Order order = 1;
+}
+
+message CancelOrderRequest {
+    string id = 1 [(validate.rules).string.uuid = true];
+    string reason = 2;
+}
+
+message CancelOrderResponse {
+    Order order = 1;
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Events (for NATS/Kafka)
+// ────────────────────────────────────────────────────────────────────────────────
+
+message OrderCreatedEvent {
+    string order_id = 1;
+    string user_id = 2;
+    Money total = 3;
+    google.protobuf.Timestamp created_at = 4;
+}
+
+message OrderConfirmedEvent {
+    string order_id = 1;
+    string user_id = 2;
+    google.protobuf.Timestamp confirmed_at = 3;
+}
+
+message OrderCancelledEvent {
+    string order_id = 1;
+    string user_id = 2;
+    string reason = 3;
+    google.protobuf.Timestamp cancelled_at = 4;
+}
+
+message OrderShippedEvent {
+    string order_id = 1;
+    string user_id = 2;
+    string tracking_number = 3;
+    google.protobuf.Timestamp shipped_at = 4;
+}

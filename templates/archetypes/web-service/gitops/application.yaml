@@ -1,0 +1,82 @@
+# ArgoCD Application for Web Service
+# This manifest defines how ArgoCD should deploy the web-service archetype
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: web-service
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: web-service
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  # Project reference
+  project: default
+
+  # Source of the Kubernetes manifests
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/web-service/k8s/overlays/production
+    kustomize:
+      # Additional kustomize options
+      images:
+      - name: web-service
+        # Image tag will be updated by CI/CD
+        newTag: latest
+
+  # Destination cluster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: web-service
+
+  # Sync policy
+  syncPolicy:
+    automated:
+      prune: true      # Remove resources that no longer exist in Git
+      selfHeal: true   # Reconcile drift
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 10m
+
+  # Ignore differences
+  ignoreDifferences:
+  - group: apps
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas  # Allow manual scaling without Git changes
+
+---
+# Staging Environment Application
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: web-service-staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: web-service
+    app.kubernetes.io/part-of: codefoundry
+    environment: staging
+spec:
+  project: staging
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/web-service/k8s/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: web-service-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true

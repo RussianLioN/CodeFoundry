@@ -1,0 +1,31 @@
+# health — Project Health Check
+
+Run health checks on **{{ project_name }}**.
+
+## Usage
+```
+/health [--all|--tests|--deps|--git]
+```
+
+## Checks
+
+### --tests
+Run test suite and report pass/fail count.
+
+### --deps
+Check for outdated or vulnerable dependencies.
+
+### --git
+Check git status: uncommitted changes, branch state, remote sync.
+
+### --all (default)
+Run all checks and report summary.
+
+## Output Format
+```
+Health Check: {{ project_name }}
+  Tests:  PASS (42/42)
+  Deps:   WARN (2 outdated)
+  Git:    OK (clean, up-to-date)
+  Status: HEALTHY
+```

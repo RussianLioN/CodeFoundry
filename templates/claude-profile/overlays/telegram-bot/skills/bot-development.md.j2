@@ -1,0 +1,25 @@
+# Skill: Telegram Bot Development
+
+## Contract
+- **Input:** Bot feature requirement
+- **Output:** aiogram handler implementation with tests
+- **Stateless:** Yes
+
+## Patterns
+1. **Command handlers** — `/start`, `/help`, custom commands
+2. **FSM (Finite State Machine)** — Multi-step dialogs
+3. **Inline keyboards** — Button-based navigation
+4. **Callback queries** — Handle button presses
+5. **Middleware** — Auth, logging, rate limiting
+
+## aiogram Conventions
+- Router-based handler registration
+- Dependency injection via middleware
+- Pydantic models for callback data
+- Async handlers (all I/O operations)
+
+## Constraints
+- **NEVER** block the event loop (no sync I/O)
+- **ALWAYS** handle Telegram API errors gracefully
+- Store bot token in environment variable, not code
+- Use webhook mode in production, polling in development

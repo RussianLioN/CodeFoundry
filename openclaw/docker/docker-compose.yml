@@ -1,0 +1,287 @@
+# OpenClaw Stack with Ollama + gemini-3-flash
+#
+# Architecture:
+#   1. openclaw-gateway - Node.js service for agent orchestration
+#   2. ollama-service - AI model runtime with gemini-3-flash
+#   3. Optional: tailscale-tunnel for remote access
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose logs -f openclaw-gateway
+#   docker-compose exec openclaw-gateway npm test
+
+version: "3.8"
+
+services:
+  # ============================================================
+  # Ollama Service - AI Model Runtime
+  # ============================================================
+  ollama-service:
+    image: ollama/ollama:latest
+    container_name: openclaw-ollama
+    restart: unless-stopped
+
+    # GPU Support (NVIDIA)
+    # Uncomment if you have NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+    ports:
+      - "11434:11434"  # Ollama API
+
+    volumes:
+      # Persist models across container restarts
+      - ollama_models:/root/.ollama
+
+      # Custom models configuration
+      - ./ollama/modelfile:/models/modelfile:ro
+
+    environment:
+      # Ollama configuration
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_PORT=11434
+      - OLLAMA_KEEP_ALIVE=30m
+      - OLLAMA_NUM_PARALLEL=4
+
+      # Model cache settings
+      - OLLAMA_MAX_QUEUE=10
+
+      # Enable debug logs (optional)
+      # - OLLAMA_DEBUG=1
+
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    networks:
+      - openclaw-network
+
+    # Resource limits (adjust based on your hardware)
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+        reservations:
+          cpus: "2"
+          memory: 4G
+
+  # ============================================================
+  # OpenClaw Gateway - Agent Orchestration Service
+  # ============================================================
+  openclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw
+
+    container_name: openclaw-gateway
+    restart: unless-stopped
+
+    ports:
+      # Gateway WebSocket
+      - "18789:18789"
+
+      # Health check endpoint
+      - "18790:18790"
+
+    volumes:
+      # Workspace: CodeFoundry + projects
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+
+      # Agent configurations
+      - ./workspace/agents:/workspace/agents:ro
+      - ./workspace/skills:/workspace/skills:ro
+
+      # OpenClaw configuration
+      - ./config/openclaw.json:/app/config/openclaw.json:ro
+
+      # Logs
+      - openclaw_logs:/app/logs
+
+      # Temp files
+      - openclaw_temp:/app/tmp
+
+    environment:
+      # Node environment
+      - NODE_ENV=production
+
+      # Ollama connection
+      - OLLAMA_BASE_URL=http://ollama-service:11434
+      - OLLAMA_MODEL=gemini-3-flash
+
+      # OpenClaw configuration
+      - GATEWAY_PORT=18789
+      - GATEWAY_HOST=0.0.0.0
+
+      # Telegram Bot (optional)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}
+
+      # Session settings
+      - SESSION_TIMEOUT=3600000  # 1 hour
+      - MAX_SESSIONS=100
+
+      # Logging
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+
+      # Workspace
+      - WORKSPACE_DIR=/workspace
+      - PROJECTS_DIR=/workspace/projects
+
+      # Model settings
+      - AI_PROVIDER=ollama
+      - AI_MODEL=gemini-3-flash
+      - AI_TEMPERATURE=0.7
+      - AI_MAX_TOKENS=4096
+
+      # Agent settings
+      - ENABLE_AGENT_ROUTING=true
+      - ENABLE_VOICE_TRANSCRIPTION=true
+      - VOICE_TRANSCRIPTION_PROVIDER=openai  # or local
+
+    depends_on:
+      ollama-service:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18790/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    networks:
+      - openclaw-network
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+  # ============================================================
+  # Telegram Bot - AI-powered development interface
+  # ============================================================
+  telegram-bot:
+    build:
+      context: ../telegram-bot
+      dockerfile: Dockerfile
+
+    container_name: openclaw-telegram-bot
+    restart: unless-stopped
+
+    environment:
+      # Node environment
+      - NODE_ENV=production
+
+      # Telegram Bot Token (REQUIRED)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+
+      # Authorization
+      - AUTHORIZED_USER_IDS=${AUTHORIZED_USER_IDS}
+
+      # Gateway connection
+      - GATEWAY_URL=ws://openclaw-gateway:18789
+      - GATEWAY_RECONNECT_INTERVAL=5000
+      - GATEWAY_MAX_RECONNECT=10
+
+      # Session settings
+      - SESSION_TIMEOUT=3600000
+
+      # Logging
+      - LOG_LEVEL=info
+
+      # Workspace
+      - WORKSPACE_DIR=/workspace
+      - PROJECTS_DIR=/workspace/projects
+
+    depends_on:
+      openclaw-gateway:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('healthy')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - openclaw-network
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  # ============================================================
+  # Tailscale Tunnel (Optional - for remote access)
+  # ============================================================
+  tailscale-tunnel:
+    image: tailscale/tailscale:latest
+    container_name: openclaw-tailscale
+    restart: unless-stopped
+
+    hostname: openclaw-gateway
+
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve-config.yaml
+      - TS_EXTRA_ARGS=--advertise-exit-node
+
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+    network_mode: service:openclaw-gateway
+
+    # Only enable if you have auth key
+    profiles:
+      - remote
+
+volumes:
+  # Ollama models - persist across restarts
+  ollama_models:
+    driver: local
+
+  # OpenClaw logs
+  openclaw_logs:
+    driver: local
+
+  # OpenClaw temp files
+  openclaw_temp:
+    driver: local
+
+  # Tailscale state
+  tailscale_state:
+    driver: local
+
+networks:
+  openclaw-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,18 @@
+# Skill: E2E Testing
+
+## Contract
+- **Input:** User flow description
+- **Output:** Playwright test implementation
+- **Stateless:** Yes
+
+## Patterns
+1. Page Object Model for reusable selectors
+2. Test data factories for isolated test runs
+3. API mocking for external services
+4. Visual regression with screenshots
+
+## Conventions
+- Test file: `tests/e2e/{feature}.spec.ts`
+- Use `data-testid` attributes for selectors
+- Each test is independent (no shared state)
+- Clean up test data after each run

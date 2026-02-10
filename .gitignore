@@ -1,0 +1,43 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.bak
+
+# Observability
+observability/logs/*.log
+observability/prometheus/data/
+observability/alertmanager/data/
+observability/grafana/data/
+
+# Session-specific (optional - uncomment if you don't want to track)
+# SESSION.md
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Converted documents
+*.docx.html
+*.docx_files/
+
+# Local development
+.env
+.env.local
+server/.env.test
+scripts/backups/
+scripts/conflicts.json
+.env.orchestrator

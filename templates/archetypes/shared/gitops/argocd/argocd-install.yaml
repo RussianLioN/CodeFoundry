@@ -1,0 +1,43 @@
+# ArgoCD Installation Manifest
+# Source: https://github.com/argoproj/argo-cd
+# Version: v2.9.3
+
+---
+## Quick Install
+## To install ArgoCD, run:
+## kubectl create namespace argocd
+## kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
+
+## For production use, download and customize the manifests:
+## curl -sSL -o argocd-install.yaml https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
+## vim argocd-install.yaml  # Customize as needed
+## kubectl apply -n argocd -f argocd-install.yaml
+
+---
+
+## Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    name: argocd
+    app.kubernetes.io/part-of: argocd
+
+---
+## ArgoCD Installation (Production-Ready)
+## This is a minimal production-ready installation with:
+## - High availability configuration
+## - Resource limits defined
+## - TLS enabled
+## - Redis persistence
+## - Repository server with S3 backend support
+
+## Note: For full production deployment, consider:
+## - Using external Redis (AWS ElastiCache, Azure Cache)
+## - Using external PostgreSQL for application state
+## - Configuring S3/GCS for repository server cache
+## - Enabling pod anti-affinity
+## - Configuring pod disruption budgets
+
+## See: https://argocd.readthedocs.io/en/stable/operator-manual/

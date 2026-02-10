@@ -1,0 +1,123 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Docker Compose for Data Pipeline
+# ═══════════════════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Airflow Webserver
+  # ────────────────────────────────────────────────────────────────────────────────
+  airflow-webserver:
+    image: apache/airflow:2.7.3-python3.11
+    container_name: ${PROJECT_NAME:-my-pipeline}-airflow
+    command: webserver
+    ports:
+      - "${AIRFLOW_PORT:-8080}:8080"
+    environment:
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=no
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_SECRET_KEY:-local_secret}
+    volumes:
+      - ./dags:/opt/airflow/dags:ro
+      - ./dbt:/opt/dbt:ro
+      - airflow-logs:/opt/airflow/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pipeline-network
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Airflow Scheduler
+  # ────────────────────────────────────────────────────────────────────────────────
+  airflow-scheduler:
+    image: apache/airflow:2.7.3-python3.11
+    container_name: ${PROJECT_NAME:-my-pipeline}-scheduler
+    command: scheduler
+    environment:
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=no
+    volumes:
+      - ./dags:/opt/airflow/dags:ro
+      - ./dbt:/opt/dbt:ro
+      - airflow-logs:/opt/airflow/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pipeline-network
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL (Airflow metadata + Data warehouse)
+  # ────────────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${PROJECT_NAME:-my-pipeline}-postgres
+    environment:
+      - POSTGRES_DB=airflow
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+    networks:
+      - pipeline-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Redis (Airflow Celery broker)
+  # ────────────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ${PROJECT_NAME:-my-pipeline}-redis
+    command: redis-server
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - pipeline-network
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Flower (Celery monitoring)
+  # ────────────────────────────────────────────────────────────────────────────────
+  flower:
+    image: apache/airflow:2.7.3-python3.11
+    container_name: ${PROJECT_NAME:-my-pipeline}-flower
+    command: celery flower
+    ports:
+      - "${FLOWER_PORT:-5555}:5555"
+    environment:
+      - AIRFLOW__CELERY__BROKER_URL=redis://redis:6379/0
+    networks:
+      - pipeline-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Volumes
+# ═══════════════════════════════════════════════════════════════════════════════
+volumes:
+  postgres-data:
+    driver: local
+  airflow-logs:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Networks
+# ═══════════════════════════════════════════════════════════════════════════════
+networks:
+  pipeline-network:
+    driver: bridge

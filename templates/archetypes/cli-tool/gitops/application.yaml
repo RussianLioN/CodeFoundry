@@ -1,0 +1,25 @@
+# ArgoCD Application for CLI Tool
+# Note: CLI tools are typically not deployed to Kubernetes
+# This Application is optional and can be used for CI/CD workflows
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cli-tool
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: cli-tool
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/RussianLioN/CodeFoundry
+    targetRevision: main
+    path: templates/archetypes/cli-tool/k8s/overlays/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cli-tool
+  syncPolicy:
+    # Manual sync only for CLI tools
+    syncOptions:
+    - CreateNamespace=false

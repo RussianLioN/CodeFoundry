@@ -1,0 +1,59 @@
+# Prometheus configuration for OpenClaw monitoring
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'openclaw'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            # - alertmanager:9093
+
+# Rule files
+rule_files:
+  # - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # OpenClaw Gateway
+  - job_name: 'openclaw-gateway'
+    static_configs:
+      - targets: ['gateway:18790']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Telegram Bot
+  - job_name: 'telegram-bot'
+    static_configs:
+      - targets: ['telegram-bot:9090']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Ollama (if metrics available)
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama-service:11434']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Docker containers
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['localhost:9323']
+    scrape_interval: 30s
+
+  # Node exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

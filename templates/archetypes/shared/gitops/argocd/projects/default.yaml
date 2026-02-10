@@ -1,0 +1,65 @@
+# ArgoCD Default Project
+# This project allows applications to be deployed to any namespace
+# without restrictions.
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+spec:
+  # Description of the project
+  description: Default project for CodeFoundry applications
+
+  # Allow manifests to deploy to any namespace
+  sourceRepos:
+  - '*'
+
+  # Only permit applications in 'argocd' namespace and
+  # namespace labels matching 'argocd.argoproj.io/managed-by=argocd'
+  destinations:
+  - namespace: '*'
+    server: https://kubernetes.default.svc
+  # You can add additional clusters here:
+  # - namespace: '*'
+  #   server: https://kubernetes.cluster2.svc
+
+  # Allow all resources in the cluster
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+
+  # Deny some critical system resources
+  namespaceResourceBlacklist:
+  - group: ''
+    kind: ResourceQuota
+  - group: ''
+    kind: LimitRange
+  - group: ''
+    kind: NetworkPolicy
+
+  # Sync window - restrict syncs to specific time windows
+  syncWindows:
+  - kind: allow
+    schedule: '0 0 * * *'  # Every hour
+    duration: 10m
+    applications:
+    - '*'
+    manualSync: true
+
+  # Enable sync status on resource
+  syncStatus:
+    synced:
+      items:
+      - group: argoproj.io
+        kind: Application
+    hidden:
+      items:
+      - group: ''
+        kind: Secret
+
+  # Don't allow orphaned resources to be auto-deleted
+  orphanedResources:
+    warn: true

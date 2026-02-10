@@ -1,0 +1,37 @@
+{
+  "archetype": "data-pipeline",
+  "version": "1.0.0",
+  "description": "ETL/ELT data pipeline profile (Airflow, dbt)",
+  "extends": "base",
+  "agents": {
+    "add": ["data-engineer", "ml-engineer"],
+    "remove": [],
+    "configure": {
+      "code-assistant": {
+        "specialization": "Airflow DAGs, dbt models, SQL transformations",
+        "languages": ["python", "sql"]
+      }
+    }
+  },
+  "skills": {
+    "add": ["etl-patterns"]
+  },
+  "commands": {
+    "add": ["deploy"]
+  },
+  "routing": {
+    "overrides": {
+      "dag|airflow|schedule|task|sensor": "data-engineer",
+      "dbt|model|schema|seed|snapshot": "data-engineer",
+      "ml|training|feature|prediction|mlflow": "ml-engineer",
+      "sql|query|table|migration": "code-assistant"
+    }
+  },
+  "variables": {
+    "default_language": "python",
+    "default_framework": "airflow",
+    "test_framework": "pytest",
+    "docker_enabled": true,
+    "k8s_enabled": false
+  }
+}

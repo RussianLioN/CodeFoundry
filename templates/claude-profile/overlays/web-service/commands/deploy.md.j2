@@ -1,0 +1,25 @@
+# deploy — Deploy {{ project_name }}
+
+## Usage
+```
+/deploy [--env staging|production] [--dry-run]
+```
+
+## Steps
+1. Run tests (`make test`)
+2. Build Docker image
+3. Push to registry
+4. {% if k8s_enabled %}Apply Kubernetes manifests{% else %}Deploy via docker-compose{% endif %}
+5. Verify health check
+6. Report status
+
+## Environments
+| Env | Auto-deploy | Approval |
+|-----|:-----------:|:--------:|
+| staging | Yes (on push) | No |
+| production | No | Yes |
+
+## Rollback
+```
+/deploy --rollback --env production
+```

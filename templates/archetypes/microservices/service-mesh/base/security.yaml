@@ -1,0 +1,132 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Istio Security Policies - mTLS & JWT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+---
+# Peer Authentication - Enforce mTLS for all services
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+spec:
+  mtls:
+    mode: STRICT  # All services must use mTLS
+
+---
+# Request Authentication - JWT for auth-service
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: auth-service-jwt
+spec:
+  targetRefs:
+  - kind: Service
+    name: auth-service
+  jwtRules:
+  - issuer: "https://auth.example.com"
+    jwks: "https://auth.example.com/.well-known/jwks.json"
+    audiences:
+    - "auth-service"
+    - "user-service"
+    - "order-service"
+    fromHeaders:
+    - name: Authorization
+      prefix: "Bearer "
+
+---
+# Authorization Policy - Allow public access to auth endpoints
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: auth-service-public
+spec:
+  targetRefs:
+  - kind: Service
+    name: auth-service
+  action: ALLOW
+  rules:
+  - to:
+    - operation:
+        paths:
+        - /v1/auth/login
+        - /v1/auth/register
+        - /v1/auth/forgot-password
+
+---
+# Authorization Policy - Require authentication for user endpoints
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: user-service-auth-required
+spec:
+  targetRefs:
+  - kind: Service
+    name: user-service
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        requestPrincipals:
+        - "*@auth.example.com"
+  to:
+    - operation:
+        notPaths:
+        - /health
+        - /metrics
+
+---
+# Authorization Policy - Service-to-service communication only
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: payment-service-internal-only
+spec:
+  targetRefs:
+  - kind: Service
+    name: payment-service
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/default/sa/order-service
+        - cluster.local/ns/default/sa/subscription-service
+  to:
+    - operation:
+        ports:
+        - "443"
+
+---
+# Authorization Policy - Deny all other requests to payment service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: payment-service-deny-all
+spec:
+  targetRefs:
+  - kind: Service
+    name: payment-service
+  action: DENY
+  rules:
+  - to:
+    - operation:
+        notPaths:
+        - /health
+
+---
+# Authorization Policy - Rate limiting per user
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: rate-limit-per-user
+spec:
+  action: ALLOW
+  rules:
+  - when:
+    - key: source.ip
+      values:
+      - "*"
+  - when:
+    - key: auth.principal
+      values:
+      - "*@auth.example.com"

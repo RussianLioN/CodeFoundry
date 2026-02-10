@@ -1,0 +1,149 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Prometheus Alert Rules for System Prompts
+# ═══════════════════════════════════════════════════════════════════════════════
+
+groups:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # CI/CD Alerts
+  # ────────────────────────────────────────────────────────────────────────────────
+  - name: ci_alerts
+    interval: 30s
+    rules:
+      - alert: CIPipelineFailing
+        expr: github_actions_workflow_failures > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: ci
+        annotations:
+          summary: "CI pipeline is failing"
+          description: "CI pipeline has {{ $value }} failing workflow(s) for more than 5 minutes"
+
+      - alert: CITestFlake
+        expr: rate(github_actions_test_flakes[1h]) > 0.1
+        labels:
+          severity: info
+          component: ci
+        annotations:
+          summary: "High test flake rate detected"
+          description: "Test flake rate is {{ $value | humanizePercentage }} over the last hour"
+
+      - alert: CIBuildTimeHigh
+        expr: github_actions_build_duration_seconds > 1800
+        labels:
+          severity: warning
+          component: ci
+        annotations:
+          summary: "CI build time is high"
+          description: "Build duration is {{ $value | humanizeDuration }}"
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # System Alerts
+  # ────────────────────────────────────────────────────────────────────────────────
+  - name: system_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} for more than 10 minutes"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / node_memory_MemTotal_bytes > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Disk space is low"
+          description: "Only {{ $value | humanizePercentage }} disk space available"
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Project Generation Alerts
+  # ────────────────────────────────────────────────────────────────────────────────
+  - name: project_generation_alerts
+    interval: 1m
+    rules:
+      - alert: ProjectGenerationFailure
+        expr: rate(project_generation_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: project-generation
+        annotations:
+          summary: "High project generation failure rate"
+          description: "Project generation failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: NoProjectsGenerated
+        expr: increase(project_generation_success_total[24h]) == 0
+        labels:
+          severity: info
+          component: project-generation
+        annotations:
+          summary: "No projects generated in 24 hours"
+          description: "No successful project generations in the last 24 hours"
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Documentation Alerts
+  # ────────────────────────────────────────────────────────────────────────────────
+  - name: documentation_alerts
+    interval: 5m
+    rules:
+      - alert: BrokenDocumentationLinks
+        expr: documentation_broken_links > 0
+        for: 1h
+        labels:
+          severity: warning
+          component: documentation
+        annotations:
+          summary: "Broken documentation links detected"
+          description: "Found {{ $value }} broken link(s) in documentation"
+
+      - alert: DocumentationOutdated
+        expr: time() - documentation_last_update_timestamp > 604800
+        labels:
+          severity: info
+          component: documentation
+        annotations:
+          summary: "Documentation may be outdated"
+          description: "Documentation hasn't been updated in over 7 days"
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Archetype Alerts
+  # ────────────────────────────────────────────────────────────────────────────────
+  - name: archetype_alerts
+    interval: 5m
+    rules:
+      - alert: ArchetypeValidationFailing
+        expr: archetype_validation_status{status="failing"} > 0
+        for: 15m
+        labels:
+          severity: critical
+          component: archetypes
+        annotations:
+          summary: "Archetype validation failing"
+          description: "Archetype {{ $labels.archetype }} is failing validation"
+
+      - alert: ArchetypeMissingFiles
+        expr: archetype_files_count < 10
+        labels:
+          severity: warning
+          component: archetypes
+        annotations:
+          summary: "Archetype may be incomplete"
+          description: "Archetype {{ $labels.archetype }} has only {{ $value }} files"

@@ -1,0 +1,63 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Multi-stage Dockerfile for NestJS Backend
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Dependencies stage
+# ────────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/types/package.json ./packages/types/
+
+# Install dependencies
+RUN npm ci
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Builder stage
+# ────────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+
+# Copy source code
+COPY . .
+
+# Build the application
+WORKDIR /app/apps/api
+RUN npm run build
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Runner stage (Production)
+# ────────────────────────────────────────────────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+
+# Copy necessary files
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+
+# Set permissions
+RUN chown -R nestjs:nodejs /app
+
+USER nestjs
+
+EXPOSE 8000
+
+ENV PORT=8000
+
+CMD ["node", "apps/api/dist/main.js"]

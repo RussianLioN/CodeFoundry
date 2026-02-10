@@ -1,0 +1,35 @@
+{
+  "archetype": "cli-tool",
+  "version": "1.0.0",
+  "description": "Command-line tool profile (Go/Python/Rust)",
+  "extends": "base",
+  "agents": {
+    "add": [],
+    "remove": ["tester"],
+    "configure": {
+      "code-assistant": {
+        "specialization": "CLI frameworks (Cobra, Typer, Clap), flag parsing, shell completion",
+        "languages": ["go", "python", "rust"]
+      }
+    }
+  },
+  "skills": {
+    "add": ["cli-patterns"]
+  },
+  "commands": {
+    "add": []
+  },
+  "routing": {
+    "overrides": {
+      "command|flag|arg|subcommand|completion": "code-assistant",
+      "release|build|binary|cross-compile": "code-assistant"
+    }
+  },
+  "variables": {
+    "default_language": "go",
+    "default_framework": "cobra",
+    "test_framework": "go test",
+    "docker_enabled": true,
+    "k8s_enabled": false
+  }
+}

@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "my-bot"
+version = "1.0.0"
+description = "Telegram Bot with aiogram"
+authors = ["Your Name"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiogram = "^3.4.1"
+aiohttp = "^3.9.0"
+pydantic = "^2.5.0"
+pydantic-settings = "^2.1.0"
+python-dotenv = "^1.0.0"
+redis = "^5.0.1"
+asyncpg = "^0.29.0"
+sqlalchemy = "^2.0.25"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+black = "^24.1.1"
+ruff = "^0.1.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W"]

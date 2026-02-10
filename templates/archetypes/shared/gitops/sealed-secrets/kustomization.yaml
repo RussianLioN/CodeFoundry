@@ -1,0 +1,51 @@
+# Kustomization for SealedSecrets Controller
+# This allows installing SealedSecrets via kubectl apply -k
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Resources to include
+resources:
+- controller.yaml
+
+# Labels to apply to all resources
+commonLabels:
+  app.kubernetes.io/name: sealed-secrets
+  app.kubernetes.io/part-of: codefoundry
+  app.kubernetes.io/component: secrets-management
+
+# Images
+images:
+- name: bitnami/sealed-secrets-controller
+  newTag: v0.24.0
+
+# ConfigMap generator for additional configuration
+configMapGenerator:
+- name: sealed-secrets-config
+  literals:
+  - LOG_LEVEL=info
+  - KEY_SIZE=4096
+
+# Patches
+patches:
+# Add resource limits to the deployment
+- patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: sealed-secrets-controller
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sealed-secrets-controller
+            resources:
+              requests:
+                cpu: 100m
+                memory: 50Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+  target:
+    kind: Deployment
+    name: sealed-secrets-controller

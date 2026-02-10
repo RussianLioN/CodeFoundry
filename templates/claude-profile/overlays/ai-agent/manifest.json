@@ -1,0 +1,36 @@
+{
+  "archetype": "ai-agent",
+  "version": "1.0.0",
+  "description": "RAG/LLM agent application profile",
+  "extends": "base",
+  "agents": {
+    "add": ["prompt-engineer", "ml-engineer"],
+    "remove": [],
+    "configure": {
+      "code-assistant": {
+        "specialization": "FastAPI + RAG service, tool calling, LLM integration",
+        "languages": ["python"]
+      }
+    }
+  },
+  "skills": {
+    "add": ["prompt-engineering", "rag-tuning"]
+  },
+  "commands": {
+    "add": ["deploy"]
+  },
+  "routing": {
+    "overrides": {
+      "prompt|system message|instruction|few-shot": "prompt-engineer",
+      "model|llm|embedding|vector|rag|retrieval": "ml-engineer",
+      "api|endpoint|fastapi|handler": "code-assistant"
+    }
+  },
+  "variables": {
+    "default_language": "python",
+    "default_framework": "fastapi",
+    "test_framework": "pytest",
+    "docker_enabled": true,
+    "k8s_enabled": false
+  }
+}

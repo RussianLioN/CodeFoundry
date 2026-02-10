@@ -1,0 +1,342 @@
+# =============================================================================
+# OpenClaw Orchestrator Stack - Command Protocol v1.0
+# =============================================================================
+# Docker Compose for OpenClaw Orchestrator Architecture (v2.0)
+#
+# Architecture:
+#   1. openclaw-gateway - Gateway v2.0 with Ollama Cloud API
+#   2. claude-code-runner - Claude Code container for CLI Bridge
+#   3. telegram-bot - Telegram Bot (optional)
+#
+# Key Changes from v1.0:
+#   - Uses Ollama Cloud API instead of local Ollama
+#   - Adds Claude Code runner container
+#   - Implements Command Protocol v1.0
+#   - CLI Bridge integration (claude-wrapper.sh)
+#
+# Usage:
+#   docker-compose -f docker-compose.orchestrator.yml up -d
+#   docker-compose -f docker-compose.orchestrator.yml logs -f gateway
+#   docker-compose -f docker-compose.orchestrator.yml exec gateway npm test
+#
+# Environment:
+#   Copy .env.orchestrator.example to .env.orchestrator
+#   Configure OLLAMA_API_KEY from https://ollama.com/settings/keys
+# =============================================================================
+
+version: '3.9'
+
+name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  orchestrator-net:
+    name: ${DOCKER_NETWORK:-openclaw-orchestrator-net}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  # Gateway logs
+  gateway-logs:
+    name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-gateway-logs
+    driver: local
+
+  # Gateway temp files
+  gateway-temp:
+    name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-gateway-temp
+    driver: local
+
+  # Claude Code workspace
+  workspace:
+    name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-workspace
+    driver: local
+
+  # Test logs
+  test-logs:
+    name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-test-logs
+    driver: local
+
+# =============================================================================
+# Services
+# =============================================================================
+
+services:
+  # -----------------------------------------------------------------------------
+  # OpenClaw Gateway v2.0 - Orchestrator with Ollama Cloud API
+  # -----------------------------------------------------------------------------
+  # WebSocket server for AI command routing and orchestration
+  # Uses gemini-3-flash-preview:cloud via Ollama Cloud API
+  # Implements Command Protocol v1.0
+  # -----------------------------------------------------------------------------
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile.gateway
+      args:
+        NODE_ENV: production
+    container_name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-gateway
+    restart: unless-stopped
+    networks:
+      - orchestrator-net
+    ports:
+      # Gateway WebSocket
+      - "${GATEWAY_PORT:-18789}:18789"
+      # Health check endpoint
+      - "${GATEWAY_HEALTH_PORT:-18790}:18790"
+    volumes:
+      # Workspace: CodeFoundry + projects
+      - ${WORKSPACE_DIR:-./workspace}:/workspace:cached
+
+      # CLI Bridge scripts
+      - ${PROJECT_DIR:-/root/projects/CodeFoundry}/server/scripts:/opt/claude-bridge:ro
+
+      # Logs
+      - gateway-logs:/app/logs
+
+      # Temp files
+      - gateway-temp:/app/tmp
+    environment:
+      # ============================================================
+      # Server Configuration
+      # ============================================================
+      - NODE_ENV=production
+      - PORT=18789
+      - HEALTH_PORT=18790
+      - HOST=0.0.0.0
+
+      # ============================================================
+      # Ollama Cloud API Configuration (NEW in v2.0)
+      # ============================================================
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-https://api.ollama.cloud}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemini-3-flash-preview:cloud}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+      - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-60000}
+
+      # ============================================================
+      # CLI Bridge Configuration (NEW in v2.0)
+      # ============================================================
+      - CLI_WRAPPER_PATH=${CLI_WRAPPER_PATH:-/opt/claude-bridge/claude-wrapper.sh}
+      - CLAUDE_CODE_CONTAINER=${CLAUDE_CODE_CONTAINER:-claude-code-runner}
+      - WORKSPACE_DIR=${WORKSPACE_DIR:-/workspace}
+
+      # ============================================================
+      # Gateway Configuration
+      # ============================================================
+      - GATEWAY_PORT=${GATEWAY_PORT:-18789}
+      - GATEWAY_HOST=0.0.0.0
+
+      # ============================================================
+      # Session Management
+      # ============================================================
+      - SESSION_TIMEOUT=${SESSION_TIMEOUT:-3600000}
+      - MAX_SESSIONS=${MAX_SESSIONS:-100}
+
+      # ============================================================
+      # Logging
+      # ============================================================
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_FILE=/app/logs/gateway.log
+
+      # ============================================================
+      # Project Context
+      # ============================================================
+      - PROJECT_NAME=${PROJECT_NAME:-system-prompts}
+      - PROJECT_DIR=/workspace
+
+      # ============================================================
+      # Command Protocol v1.0
+      # ============================================================
+      - COMMAND_PROTOCOL_VERSION=1.0
+      - COMMAND_TIMEOUT=${COMMAND_TIMEOUT:-120000}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18790/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.openclaw.service=gateway"
+      - "com.openclaw.version=2.0"
+      - "com.openclaw.architecture=orchestrator"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # -----------------------------------------------------------------------------
+  # Claude Code Runner - CLI Bridge Target
+  # -----------------------------------------------------------------------------
+  # Container for executing commands via CLI Bridge
+  # Receives Command Protocol v1.0 JSON from Gateway
+  # Executes via claude-wrapper.sh
+  # -----------------------------------------------------------------------------
+  claude-code-runner:
+    image: antoniomika/sish:latest
+    # TODO: Replace with actual Claude Code container image
+    # For now, using a placeholder container for testing
+    container_name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-claude-runner
+    restart: unless-stopped
+    networks:
+      - orchestrator-net
+    volumes:
+      # Workspace: shared with gateway
+      - ${WORKSPACE_DIR:-./workspace}:/workspace:cached
+
+      # CLI Bridge scripts
+      - ${PROJECT_DIR:-/root/projects/CodeFoundry}/server/scripts:/opt/claude-bridge:ro
+
+      # Test logs
+      - test-logs:/var/log/tests
+    environment:
+      # ============================================================
+      # Container Configuration
+      # ============================================================
+      - NODE_ENV=development
+
+      # ============================================================
+      # Workspace Configuration
+      # ============================================================
+      - WORKSPACE_DIR=/workspace
+      - PROJECT_DIR=/workspace
+
+      # ============================================================
+      # CLI Bridge Configuration
+      # ============================================================
+      - CLI_WRAPPER_PATH=/opt/claude-bridge/claude-wrapper.sh
+
+      # ============================================================
+      # Logging
+      # ============================================================
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+    command: tail -f /dev/null  # Keep container running
+    healthcheck:
+      test: ["CMD", "test", "-f", "/workspace/package.json"]
+      interval: 60s
+      timeout: 5s
+      retries: 2
+      start_period: 20s
+    labels:
+      - "com.openclaw.service=claude-code-runner"
+      - "com.openclaw.architecture=orchestrator"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # -----------------------------------------------------------------------------
+  # Telegram Bot - Optional Interface
+  # -----------------------------------------------------------------------------
+  # Telegram Bot for AI-powered development interface
+  # Connects to Gateway for command execution
+  # -----------------------------------------------------------------------------
+  telegram-bot:
+    build:
+      context: ../telegram-bot
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-telegram-bot
+    restart: unless-stopped
+    networks:
+      - orchestrator-net
+    depends_on:
+      gateway:
+        condition: service_healthy
+    volumes:
+      # Workspace: shared with gateway
+      - ${WORKSPACE_DIR:-./workspace}:/workspace:cached
+
+      # Bot specific logs
+      - gateway-logs:/app/logs
+    environment:
+      # ============================================================
+      # Telegram Configuration
+      # ============================================================
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - AUTHORIZED_USER_IDS=${AUTHORIZED_USER_IDS}
+      - BOT_USERNAME=${BOT_USERNAME:-}
+
+      # ============================================================
+      # Gateway Connection
+      # ============================================================
+      - GATEWAY_HOST=gateway
+      - GATEWAY_PORT=18789
+      - GATEWAY_RECONNECT_DELAY=${GATEWAY_RECONNECT_DELAY:-5000}
+      - GATEWAY_MAX_RECONNECT_ATTEMPTS=${GATEWAY_MAX_RECONNECT_ATTEMPTS:-10}
+
+      # ============================================================
+      # Session Management
+      # ============================================================
+      - SESSION_TIMEOUT=${SESSION_TIMEOUT:-3600000}
+      - SESSION_CLEANUP_INTERVAL=${SESSION_CLEANUP_INTERVAL:-3600000}
+
+      # ============================================================
+      # Logging
+      # ============================================================
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FILE=/app/logs/bot.log
+
+      # ============================================================
+      # Project Context
+      # ============================================================
+      - PROJECT_NAME=${PROJECT_NAME:-system-prompts}
+      - PROJECT_DIR=/workspace
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.openclaw.service=telegram-bot"
+      - "com.openclaw.architecture=orchestrator"
+    profiles:
+      - telegram  # Only start with --profile telegram
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+# =============================================================================
+# Notes
+# =============================================================================
+#
+# Getting Ollama Cloud API Key:
+#   1. Visit https://ollama.com/settings/keys
+#   2. Sign in or create account
+#   3. Generate API key
+#   4. Add to .env.orchestrator: OLLAMA_API_KEY=sk-xxxxx
+#
+# Testing Command Protocol v1.0:
+#   docker-compose -f docker-compose.orchestrator.yml exec gateway \
+#     npm test
+#
+# CLI Bridge Integration:
+#   Gateway -> CommandExecutor -> claude-wrapper.sh -> Claude Code
+#
+# Architecture Diagram:
+#   Telegram -> Bot -> Gateway (v2.0) -> CommandExecutor -> CLI Bridge -> Claude Code
+#                                    -> Ollama Cloud API
+# =============================================================================

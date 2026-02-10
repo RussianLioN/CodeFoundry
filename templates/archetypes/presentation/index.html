@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Presentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/monokai.min.css">
+    <style>
+        /* Custom styles */
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --accent-color: #f59e0b;
+        }
+
+        .reveal {
+            color: #333;
+            background: #fff;
+        }
+
+        .reveal h1, .reveal h2, .reveal h3 {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .reveal h1 { font-size: 2.5em; }
+        .reveal h2 { font-size: 1.8em; }
+        .reveal h3 { font-size: 1.3em; }
+
+        .reveal pre {
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0.1);
+        }
+
+        .reveal code {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        .reveal pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .reveal blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1em;
+            margin: 1em 0;
+            font-style: italic;
+            color: #666;
+        }
+
+        .reveal img {
+            max-width: 100%;
+            max-height: 600px;
+        }
+
+        .reveal .fragment {
+            transition: all 0.3s ease;
+        }
+
+        .reveal .fade-in {
+            opacity: 0;
+        }
+        .reveal .fade-in.visible {
+            opacity: 1;
+        }
+
+        /* Slide number */
+        .reveal .slide-number {
+            color: var(--primary-color);
+            font-size: 0.8em;
+        }
+
+        /* Progress bar */
+        .reveal .progress {
+            height: 4px;
+            background: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slides will be injected here by build process -->
+            <section data-markdown="slides/introduction.md"></section>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/mermaid/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/highlight/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/plugin/notes/notes.min.js"></script>
+    <script>
+        // Load slides from markdown files
+        const slides = [
+            { markdown: document.getElementById('slide-1')?.innerHTML || '# Slide 1' },
+            // Add more slides as needed
+        ];
+
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            controls: true,
+            progress: true,
+            center: true,
+            transition: 'slide',
+            backgroundTransition: 'fade',
+
+            plugins: [
+                RevealMarkdown,
+                RevealMermaid,
+                RevealHighlight,
+                RevealNotes
+            ],
+
+            markdown: {
+                smartypant: true,
+                breaks: true
+            },
+
+            mermaid: {
+                theme: 'default',
+                startOnLoad: false
+            },
+
+            highlight: {
+                theme: 'monokai'
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# GitHub Actions - Continuous Deployment
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: CD
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: myuser/my-api
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Deploy to Production
+  # ────────────────────────────────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PROD }}
+
+      - name: Update image tag in Kustomize
+        run: |-
+          TAG=${GITHUB_REF#refs/tags/}
+          cd k8s/overlays/production
+          kustomize edit set image ${REGISTRY}/${IMAGE_NAME}=${REGISTRY}/${IMAGE_NAME}:${TAG}
+
+      - name: Deploy to Kubernetes
+        run: |-
+          kubectl apply -k k8s/overlays/production
+
+      - name: Wait for rollout
+        run: |-
+          kubectl rollout status deployment/my-api -n production --timeout=10m
+
+      - name: Verify deployment
+        run: |-
+          kubectl get pods -n production -l app=my-api
+          kubectl get svc -n production -l app=my-api
+
+      - name: Smoke test
+        run: |-
+          ENDPOINT=$(kubectl get svc my-api -n production -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          curl -f https://api.example.com/health || exit 1
+
+  # ────────────────────────────────────────────────────────────────────────────────
+  # Create GitHub Release
+  # ────────────────────────────────────────────────────────────────────────────────
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" $(git rev-list --max-parents=0 HEAD)..HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" ${PREV_TAG}..HEAD)
+          fi
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## Changes
+            ${{ steps.changelog.outputs.changelog }}
+
+            ## Docker Image
+            `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}`
+          draft: false
+          prerelease: false

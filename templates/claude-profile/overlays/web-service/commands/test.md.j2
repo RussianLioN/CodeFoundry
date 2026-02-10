@@ -1,0 +1,16 @@
+# test — Run Test Suite
+
+## Usage
+```
+/test [--unit|--integration|--e2e|--all] [--coverage]
+```
+
+## Test Types
+- `--unit` — Unit tests (default)
+- `--integration` — API integration tests
+- `--e2e` — End-to-end tests
+- `--all` — Run all test suites
+- `--coverage` — Generate coverage report
+
+## Framework
+{{ test_framework | default('jest') }}

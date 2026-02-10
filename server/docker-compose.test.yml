@@ -1,0 +1,308 @@
+# =============================================================================
+# CodeFoundry Remote Testing Stack
+# =============================================================================
+# Docker Compose for ephemeral testing containers on ainetic.tech
+#
+# Architecture:
+#   - Session-based lifecycle (containers live while session is active)
+#   - Volume mounts for project workspace
+#   - Health checks for all services
+#   - Log aggregation to /var/log/tests
+#
+# Usage:
+#   make start-test              # Start all services
+#   make stop-test               # Stop and remove
+#   make logs                    # View logs
+#   make shell                   # Enter container
+#
+# Services:
+#   - gateway       : OpenClaw WebSocket Gateway (port 18789)
+#   - telegram-bot  : Telegram Bot for testing
+#   - test-runner   : Generic test execution container
+#   - ollama        : Local AI (optional, enable in .env.test)
+# =============================================================================
+
+version: '3.9'
+
+name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}
+
+# =============================================================================
+# Environment (loaded from .env.test)
+# =============================================================================
+# COMPOSE_PROJECT_NAME=codefoundry-test
+# CONTAINER_PREFIX=test
+# PROJECT_DIR=/root/projects/system-prompts
+# GATEWAY_PORT=18789
+# GATEWAY_HEALTH_PORT=18790
+# TELEGRAM_BOT_TOKEN=your_token
+# AUTHORIZED_USER_IDS=your_id
+# OLLAMA_ENABLED=false
+# LOG_DIR=/var/log/tests
+
+# =============================================================================
+# Networks
+# =============================================================================
+
+networks:
+  test-net:
+    name: ${DOCKER_NETWORK:-codefoundry-test-net}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# =============================================================================
+# Volumes
+# =============================================================================
+
+volumes:
+  test-logs:
+    name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-logs
+    driver: local
+
+  ollama-models:
+    name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-ollama
+    driver: local
+
+  node-modules-cache:
+    name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-node-modules
+    driver: local
+
+# =============================================================================
+# Services
+# =============================================================================
+
+services:
+  # -----------------------------------------------------------------------------
+  # OpenClaw Gateway
+  # -----------------------------------------------------------------------------
+  # WebSocket server for AI command routing and orchestration
+  # Port: 18789 (WebSocket), 18790 (Health check)
+  # -----------------------------------------------------------------------------
+  gateway:
+    build:
+      context: ${PROJECT_DIR}/openclaw
+      dockerfile: gateway/Dockerfile.gateway
+      args:
+        NODE_ENV: production
+    container_name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-gateway
+    restart: unless-stopped
+    networks:
+      - test-net
+    ports:
+      - "${GATEWAY_PORT:-18789}:18789"
+      - "${GATEWAY_HEALTH_PORT:-18790}:18790"
+    volumes:
+      # Mount project workspace
+      - ${PROJECT_DIR}:/workspace:cached
+      # Log aggregation
+      - test-logs:/var/log/tests
+      # Gateway specific
+      - /workspace/openclaw/gateway/logs:/app/logs
+    environment:
+      # Server configuration
+      - NODE_ENV=production
+      - PORT=18789
+      - HEALTH_PORT=18790
+      - HOST=0.0.0.0
+
+      # Ollama configuration (if enabled)
+      - OLLAMA_ENABLED=${OLLAMA_ENABLED:-false}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemini-3-flash-preview}
+
+      # Logging
+      - LOG_LEVEL=${GATEWAY_LOG_LEVEL:-info}
+      - LOG_FILE=/app/logs/gateway.log
+
+      # Session management
+      - SESSION_TIMEOUT=${SESSION_TIMEOUT:-86400000}
+
+      # Project context
+      - PROJECT_NAME=${PROJECT_NAME:-system-prompts}
+      - PROJECT_DIR=/workspace
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18790/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.codefoundry.service=gateway"
+      - "com.codefoundry.environment=test"
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # -----------------------------------------------------------------------------
+  # Telegram Bot
+  # -----------------------------------------------------------------------------
+  # Telegram Bot for remote testing via real Telegram API
+  # Connects to Gateway for command execution
+  # -----------------------------------------------------------------------------
+  telegram-bot:
+    build:
+      context: ${PROJECT_DIR}/openclaw/telegram-bot
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-telegram-bot
+    restart: unless-stopped
+    networks:
+      - test-net
+    depends_on:
+      gateway:
+        condition: service_healthy
+    volumes:
+      # Mount project workspace
+      - ${PROJECT_DIR}:/workspace:cached
+      # Log aggregation
+      - test-logs:/var/log/tests
+      # Bot specific logs
+      - /workspace/openclaw/telegram-bot/logs:/app/logs
+    environment:
+      # Telegram configuration
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - AUTHORIZED_USER_IDS=${AUTHORIZED_USER_IDS}
+      - BOT_USERNAME=${BOT_USERNAME:-}
+
+      # Gateway connection
+      - GATEWAY_HOST=gateway
+      - GATEWAY_PORT=18789
+      - GATEWAY_RECONNECT_DELAY=5000
+      - GATEWAY_MAX_RECONNECT_ATTEMPTS=10
+
+      # Session management
+      - SESSION_TIMEOUT=${SESSION_TIMEOUT:-86400000}
+      - SESSION_CLEANUP_INTERVAL=3600000
+
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FILE=/app/logs/bot.log
+
+      # Project context
+      - PROJECT_NAME=${PROJECT_NAME:-system-prompts}
+      - PROJECT_DIR=/workspace
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.codefoundry.service=telegram-bot"
+      - "com.codefoundry.environment=test"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  # -----------------------------------------------------------------------------
+  # Test Runner
+  # -----------------------------------------------------------------------------
+  # Generic container for running tests and scripts
+  # Used for manual testing and debugging
+  # -----------------------------------------------------------------------------
+  test-runner:
+    build:
+      context: ${PROJECT_DIR}
+      dockerfile: Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-runner
+    restart: unless-stopped
+    networks:
+      - test-net
+    depends_on:
+      gateway:
+        condition: service_healthy
+    volumes:
+      # Mount project workspace (read-write for development)
+      - ${PROJECT_DIR}:/workspace
+      # Log aggregation
+      - test-logs:/var/log/tests
+      # Node modules cache
+      - node-modules-cache:/workspace/node_modules
+    environment:
+      # Development environment
+      - NODE_ENV=development
+      - LOG_LEVEL=debug
+
+      # Gateway connection
+      - GATEWAY_HOST=gateway
+      - GATEWAY_PORT=18789
+
+      # Test configuration
+      - TEST_TIMEOUT=${TEST_TIMEOUT_SECONDS:-300}
+      - TEST_RETRY_COUNT=${TEST_RETRY_COUNT:-3}
+      - TEST_PARALLEL=${TEST_PARALLEL:-false}
+
+      # Project context
+      - PROJECT_NAME=${PROJECT_NAME:-system-prompts}
+      - PROJECT_DIR=/workspace
+    command: tail -f /dev/null  # Keep container running
+    healthcheck:
+      test: ["CMD", "test", "-f", "/workspace/package.json"]
+      interval: 60s
+      timeout: 5s
+      retries: 2
+    labels:
+      - "com.codefoundry.service=test-runner"
+      - "com.codefoundry.environment=test"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # -----------------------------------------------------------------------------
+  # Ollama (Optional)
+  # -----------------------------------------------------------------------------
+  # Local AI inference engine
+  # Enable by setting OLLAMA_ENABLED=true in .env.test
+  # -----------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-codefoundry-test}-ollama
+    restart: unless-stopped
+    networks:
+      - test-net
+    profiles:
+      - ollama  # Only start with --profile ollama
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemini-3-flash-preview}
+      - OLLAMA_GPU=${OLLAMA_GPU:-false}
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "com.codefoundry.service=ollama"
+      - "com.codefoundry.environment=test"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+# All volumes defined above in single volumes section

@@ -1,0 +1,30 @@
+{
+  "archetype": "presentation",
+  "version": "1.0.0",
+  "description": "Reveal.js presentation profile",
+  "extends": "base",
+  "agents": {
+    "add": ["content-generator", "slide-designer"],
+    "remove": ["code-assistant", "reviewer", "tester"],
+    "configure": {}
+  },
+  "skills": {
+    "add": ["content-generator"]
+  },
+  "commands": {
+    "add": []
+  },
+  "routing": {
+    "overrides": {
+      "slide|content|text|outline|speaker note|diagram": "content-generator",
+      "theme|css|animation|layout|reveal|transition": "slide-designer"
+    }
+  },
+  "variables": {
+    "default_language": "markdown",
+    "default_framework": "revealjs",
+    "test_framework": "",
+    "docker_enabled": false,
+    "k8s_enabled": false
+  }
+}

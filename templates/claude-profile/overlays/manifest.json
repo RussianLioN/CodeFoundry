@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "description": "Orchestrator profile overlays for different project archetypes",
+  "archetypes": [
+    "ai-agent",
+    "cli-tool",
+    "data-pipeline",
+    "fullstack",
+    "microservices",
+    "presentation",
+    "telegram-bot",
+    "web-service"
+  ]
+}

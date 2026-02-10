@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://codefoundry.dev/schema/profile-manifest.json",
+  "title": "CodeFoundry Profile Manifest",
+  "description": "Schema for archetype-specific .claude/ profile overlay manifests",
+  "type": "object",
+  "required": ["archetype", "version", "extends", "agents"],
+  "properties": {
+    "archetype": {
+      "type": "string",
+      "enum": [
+        "web-service",
+        "ai-agent",
+        "data-pipeline",
+        "telegram-bot",
+        "cli-tool",
+        "microservices",
+        "fullstack",
+        "presentation"
+      ],
+      "description": "Target archetype identifier"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Manifest version (semver)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable profile description"
+    },
+    "extends": {
+      "type": "string",
+      "const": "base",
+      "description": "Base profile to extend (always 'base')"
+    },
+    "agents": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Agent names to add on top of base"
+        },
+        "remove": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Base agents to exclude"
+        },
+        "configure": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "specialization": { "type": "string" },
+              "languages": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          },
+          "description": "Per-agent configuration overrides"
+        }
+      },
+      "additionalProperties": false
+    },
+    "skills": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skills to add on top of base"
+        }
+      },
+      "additionalProperties": false
+    },
+    "commands": {
+      "type": "object",
+      "properties": {
+        "add": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Commands to add on top of base"
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing": {
+      "type": "object",
+      "properties": {
+        "overrides": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Keyword pattern → agent name routing overrides"
+        }
+      },
+      "additionalProperties": false
+    },
+    "variables": {
+      "type": "object",
+      "properties": {
+        "default_language": { "type": "string" },
+        "default_framework": { "type": "string" },
+        "docker_enabled": { "type": "boolean" },
+        "k8s_enabled": { "type": "boolean" }
+      },
+      "additionalProperties": true,
+      "description": "Template variables for Jinja2 rendering"
+    }
+  },
+  "additionalProperties": false
+}

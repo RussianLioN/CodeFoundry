@@ -1,0 +1,36 @@
+{
+  "archetype": "fullstack",
+  "version": "1.0.0",
+  "description": "Fullstack monorepo profile (Next.js + NestJS, Nx)",
+  "extends": "base",
+  "agents": {
+    "add": ["frontend", "backend", "devops"],
+    "remove": [],
+    "configure": {
+      "reviewer": {
+        "specialization": "Type safety across stack, API contract validation, E2E coverage"
+      }
+    }
+  },
+  "skills": {
+    "add": ["e2e-testing", "security-check"]
+  },
+  "commands": {
+    "add": ["deploy", "test"]
+  },
+  "routing": {
+    "overrides": {
+      "react|next|component|page|layout|tailwind|css": "frontend",
+      "nestjs|controller|service|module|dto|guard|pipe": "backend",
+      "deploy|docker|k8s|ci|cd": "devops",
+      "e2e|playwright|cypress|integration test": "tester"
+    }
+  },
+  "variables": {
+    "default_language": "typescript",
+    "default_framework": "nextjs",
+    "test_framework": "jest",
+    "docker_enabled": true,
+    "k8s_enabled": true
+  }
+}

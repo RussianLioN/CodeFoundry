@@ -1,0 +1,83 @@
+# ArgoCD Application for Microservices
+# This is an AppOfApps pattern that deploys all microservices
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: microservices
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: microservices
+    app.kubernetes.io/part-of: codefoundry
+spec:
+  generators:
+  # Generate applications for each service directory
+  - git:
+      repoURL: https://github.com/RussianLioN/CodeFoundry
+      revision: main
+      directories:
+      - path: templates/archetypes/microservices/k8s/services/*/overlays/production
+
+  template:
+    metadata:
+      name: '{{path.basename}}'
+      labels:
+        app.kubernetes.io/component: microservice
+        app.kubernetes.io/part-of: codefoundry
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/RussianLioN/CodeFoundry
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: microservices
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
+        ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+          - /spec/replicas
+
+---
+# Staging ApplicationSet
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: microservices-staging
+  namespace: argocd
+  labels:
+    environment: staging
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/RussianLioN/CodeFoundry
+      revision: main
+      directories:
+      - path: templates/archetypes/microservices/k8s/services/*/overlays/staging
+  template:
+    metadata:
+      name: '{{path.basename}}-staging'
+      labels:
+        environment: staging
+    spec:
+      project: staging
+      source:
+        repoURL: https://github.com/RussianLioN/CodeFoundry
+        targetRevision: main
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: microservices-staging
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true

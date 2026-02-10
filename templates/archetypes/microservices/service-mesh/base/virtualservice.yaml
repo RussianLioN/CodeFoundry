@@ -1,0 +1,104 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Istio Virtual Service - Traffic Management
+# ═══════════════════════════════════════════════════════════════════════════════
+
+---
+# User Service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: user-service
+spec:
+  hosts:
+  - user-service
+  http:
+  # Canary deployment for requests with canary header
+  - match:
+    - headers:
+        x-canary:
+          exact: "true"
+    route:
+    - destination:
+        host: user-service
+        subset: v2
+      weight: 100
+  # Regular traffic to stable version
+  - route:
+    - destination:
+        host: user-service
+        subset: v1
+      weight: 100
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+    timeout: 5s
+
+---
+# Order Service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: order-service
+spec:
+  hosts:
+  - order-service
+  http:
+  - route:
+    - destination:
+        host: order-service
+        subset: v1
+      weight: 100
+    fault:
+      delay:
+        percentage:
+          value: 0.1  # 0.1% delay injection for chaos engineering
+        fixedDelay: 2s
+
+---
+# Auth Service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: auth-service
+spec:
+  hosts:
+  - auth-service
+  http:
+  - match:
+    - uri:
+        prefix: /v1/auth
+    route:
+    - destination:
+        host: auth-service
+        subset: v1
+      weight: 100
+    corsPolicy:
+      allowOrigin:
+      - "*"
+      allowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+      allowHeaders:
+      - Content-Type
+      - Authorization
+      maxAge: "24h"
+
+---
+# Payment Service
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: payment-service
+spec:
+  hosts:
+  - payment-service
+  http:
+  - route:
+    - destination:
+        host: payment-service
+        subset: v1
+      weight: 100
+    timeout: 10s  # Longer timeout for payment processing

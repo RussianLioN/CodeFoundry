@@ -1,0 +1,231 @@
+# =============================================================================
+# CodeFoundry Remote Testing - Vector Configuration
+# =============================================================================
+# Log aggregation and forwarding for testing infrastructure
+#
+# Features:
+#   - JSON structured logging
+#   - Centralised log aggregation
+#   - Log retention (7 days)
+#   - Multi-source ingestion
+#
+# Sources:
+#   - Docker container logs
+#   - Gateway logs
+#   - Telegram Bot logs
+#   - Test runner logs
+#
+# Sinks:
+#   - File (local storage)
+#   - Optional: Loki, Elasticsearch, etc.
+# =============================================================================
+
+# =============================================================================
+# Data Directory
+# =============================================================================
+
+data_dir = "/var/lib/vector"
+
+# =============================================================================
+# Sources
+# =============================================================================
+
+# Docker container logs via Docker socket
+[sources.docker_logs]
+type = "docker_logs"
+docker_host = "unix:///var/run/docker.sock"
+include_containers = [
+  "codefoundry-test-.*"
+]
+auto_partial_merge = true
+
+# Gateway logs from file
+[sources.gateway_logs]
+type = "file"
+include = ["/workspace/openclaw/gateway/logs/*.log"]
+read_from = "beginning"
+
+# Telegram Bot logs from file
+[sources.bot_logs]
+type = "file"
+include = ["/workspace/openclaw/telegram-bot/logs/*.log"]
+read_from = "beginning"
+
+# Test logs directory
+[sources.test_logs]
+type = "file"
+include = ["/var/log/tests/**/*.log"]
+read_from = "beginning"
+
+# System logs via journald
+[sources.system_logs]
+type = "journald"
+units = ["docker", "sshd"]
+include_units = []
+
+# =============================================================================
+# Transforms
+# =============================================================================
+
+# Parse JSON logs
+[transforms.parse_json]
+type = "remap"
+inputs = ["docker_logs", "gateway_logs", "bot_logs", "test_logs"]
+source = """
+  . = parse_json!(.message) ?? .
+
+  # Add common fields
+  .timestamp = now()
+  .environment = "testing"
+  .cluster = "codefoundry-test"
+  .server = "ainetic-tech"
+"""
+
+# Add container metadata
+[transforms.add_metadata]
+type = "remap"
+inputs = ["parse_json"]
+source = """
+  # Extract container name
+  .container_name = .container_name ?? "unknown"
+
+  # Extract service name
+  if starts_with(.container_name, "codefoundry-test-") {
+    parts = split(.container_name, "-")
+    .service = parts[2] ?? "unknown"
+    .session = parts[3] ?? "default"
+  }
+
+  # Add log level
+  if exists(.level) {
+    .log_level = to_upper!(.level)
+  } else if exists(.LEVEL) {
+    .log_level = to_upper!(.LEVEL)
+  } else {
+    .log_level = "INFO"
+  }
+
+  # Filter sensitive data
+  del(.TELEGRAM_BOT_TOKEN)
+  del(.AUTHORIZED_USER_IDS)
+  del(.password)
+  del(.api_key)
+"""
+
+# Rate limiting for error logs
+[transforms.filter_errors]
+type = "filter"
+inputs = ["add_metadata"]
+condition = """
+  .log_level == "ERROR" || .log_level == "WARN" || .log_level == "CRITICAL"
+"""
+
+# =============================================================================
+# Sinks
+# =============================================================================
+
+# Console output (for debugging)
+[sinks.console]
+type = "console"
+inputs = ["add_metadata"]
+encoding.codec = "json"
+target = "stdout"
+
+# File sink - all logs
+[sinks.file_all]
+type = "file"
+inputs = ["add_metadata"]
+path = "/var/log/codefoundry/all-%Y-%m-%d.log"
+encoding.codec = "json"
+rotation.gzip_max_filename = 10
+compression = "gzip"
+
+# File sink - error logs only
+[sinks.file_errors]
+type = "file"
+inputs = ["filter_errors"]
+path = "/var/log/codefoundry/errors-%Y-%m-%d.log"
+encoding.codec = "json"
+rotation.gzip_max_filename = 10
+compression = "gzip"
+
+# File sink - gateway logs
+[sinks.file_gateway]
+type = "file"
+inputs = ["add_metadata"]
+path = "/var/log/codefoundry/gateway-%Y-%m-%d.log"
+encoding.codec = "json"
+condition = '.service == "gateway"'
+rotation.gzip_max_filename = 10
+compression = "gzip"
+
+# File sink - bot logs
+[sinks.file_bot]
+type = "file"
+inputs = ["add_metadata"]
+path = "/var/log/codefoundry/bot-%Y-%m-%d.log"
+encoding.codec = "json"
+condition = '.service == "telegram-bot"'
+rotation.gzip_max_filename = 10
+compression = "gzip"
+
+# File sink - test logs
+[sinks.file_test]
+type = "file"
+inputs = ["add_metadata"]
+path = "/var/log/codefoundry/tests-%Y-%m-%d.log"
+encoding.codec = "json"
+condition = '.service == "test-runner"'
+rotation.gzip_max_filename = 10
+compression = "gzip"
+
+# =============================================================================
+# Optional: Loki Sink
+# =============================================================================
+# Uncomment if running Grafana Loki
+
+# [sinks.loki]
+# type = "loki"
+# inputs = ["add_metadata"]
+# endpoint = "http://loki:3100"
+# encoding.codec = "json"
+# batch.max_events = 10
+# batch.timeout_secs = 10
+#
+# [sinks.loki.labels]
+# environment = "testing"
+# cluster = "codefoundry-test"
+# server = "ainetic-tech"
+
+# =============================================================================
+# Optional: Elasticsearch Sink
+# =============================================================================
+# Uncomment if using Elasticsearch
+
+# [sinks.elasticsearch]
+# type = "elasticsearch"
+# inputs = ["add_metadata"]
+# endpoints = ["http://elasticsearch:9200"]
+# bulk.index = "codefoundry-tests-%Y-%m-%d"
+#
+# [sinks.elasticsearch.auth]
+# strategy = "basic"
+# user = "vector"
+# password = "${ES_PASSWORD}"
+
+# =============================================================================
+# Health Check
+# =============================================================================
+
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+# =============================================================================
+# Metrics
+# =============================================================================
+
+[sinks.prometheus_exporter]
+type = "prometheus_exporter"
+inputs = ["add_metadata"]
+address = "0.0.0.0:9598"
