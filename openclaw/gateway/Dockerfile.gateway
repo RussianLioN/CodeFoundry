@@ -38,7 +38,8 @@ RUN apk add --no-cache \
     git \
     python3 \
     bash \
-    curl
+    curl \
+    jq
 
 # Copy from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -63,7 +64,8 @@ RUN apk add --no-cache \
     git \
     python3 \
     bash \
-    curl
+    curl \
+    jq
 
 # Create app directory
 WORKDIR /app
