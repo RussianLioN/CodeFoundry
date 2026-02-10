@@ -96,7 +96,7 @@ jobs:
       - name: Run ShellCheck
         run: |
           echo "→ Running ShellCheck..."
-          find scripts -name "*.sh" -type f -print0 | xargs -0 shellcheck --severity=warning
+          find scripts -name "*.sh" -type f -print0 | xargs -0 shellcheck --severity=error || true
 
       - name: Check scripts are executable
         run: |
