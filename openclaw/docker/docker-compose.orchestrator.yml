@@ -40,8 +40,9 @@ networks:
       config:
         - subnet: 172.29.0.0/16
   traefik-net:
-    external: true
     name: traefik-net
+    driver: bridge
+    external: false
 
 # =============================================================================
 # Volumes
