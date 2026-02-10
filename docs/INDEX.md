@@ -163,6 +163,7 @@
 | [Claude Code](../ide-support/claude/README.md) | Claude Code CLI |
 | [Agent Teams](agents/agent-teams.md) | 🔀 Agent Teams (Opus 4.6) |
 | [Agent Teams Integration Plan](reference/agent-teams-integration-plan.md) | 🆕 План интеграции (Phase 15) |
+| [Expert Consilium](agents/expert-consilium.quick.md) | 🎓 Экспертные дебаты (13 экспертов) |
 | [Cursor](../ide-support/cursor/README.md) | Cursor IDE |
 | [Qoder](../ide-support/qoder/README.md) | Qoder IDE |
 
@@ -219,6 +220,7 @@
 Последнее обновление: 2026-02-10
 
 Изменения:
+- ✅ **[2026-02-10]** 🆕 **Expert Consilium** — система экспертных дебатов (13 экспертов)
 - ✅ **[2026-02-10]** Добавлен автоматический скрипт setup-github-secrets.sh
 - ✅ **[2026-02-10]** Создана документация scripts/README.md
 - ✅ **[2026-02-10]** Добавлена документация по GitHub Actions Secrets Setup
