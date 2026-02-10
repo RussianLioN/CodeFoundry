@@ -426,13 +426,16 @@ class OpenClawGateway {
 
       // Fallback to free-form chat if command generation fails
       console.log('[GATEWAY] Command generation failed, falling back to free-form chat');
+      console.log('[GATEWAY] Original error:', error);
 
       try {
+        console.log('[GATEWAY] About to call streamProgress...');
         await this.streamProgress(session, {
           stage: 'routing',
           progress: 50,
           message: 'Обрабатываю свободный чат...'
         });
+        console.log('[GATEWAY] streamProgress completed successfully');
 
         // Build chat messages with history context
         const chatMessages = [
@@ -444,7 +447,9 @@ class OpenClawGateway {
           { role: 'user', content }
         ];
 
+        console.log('[GATEWAY] About to call Ollama.chat...');
         const response = await this.ollama.chat(chatMessages);
+        console.log('[GATEWAY] Ollama.chat completed, response:', response?.substring(0, 100));
 
         return {
           type: 'complete',
@@ -802,14 +807,21 @@ Location: ${project_name}/.claude/
    * Stream progress to WebSocket client
    */
   private async streamProgress(session: SessionContext, update: ProgressUpdate): Promise<void> {
+    console.log('[STREAM_PROGRESS] Called for session:', session.id, 'update:', update);
     const ws = this.getWebSocket(session.id);
-    if (!ws) return;
+    console.log('[STREAM_PROGRESS] WebSocket found:', !!ws);
+    if (!ws) {
+      console.log('[STREAM_PROGRESS] No WebSocket found, returning');
+      return;
+    }
 
+    console.log('[STREAM_PROGRESS] Sending message...');
     this.sendMessage(ws, {
       type: 'progress',
       sessionId: session.id,
       ...update
     });
+    console.log('[STREAM_PROGRESS] Message sent successfully');
   }
 
   /**
@@ -998,6 +1010,19 @@ Gateway: [деплоит...]
 // ============================================================================
 
 if (require.main === module) {
+  // Global error handlers for debugging
+  process.on('uncaughtException', (error) => {
+    console.error('[UNCAUGHT EXCEPTION]', error);
+    console.error('[UNCAUGHT EXCEPTION] Stack:', error.stack);
+    // Give time for logging before exit
+    setTimeout(() => process.exit(1), 100);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED REJECTION]', reason);
+    console.error('[UNHANDLED REJECTION] Promise:', promise);
+  });
+
   const gateway = new OpenClawGateway({
     port: GATEWAY_PORT,
     host: GATEWAY_HOST,
