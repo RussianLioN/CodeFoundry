@@ -39,6 +39,9 @@ networks:
     ipam:
       config:
         - subnet: 172.29.0.0/16
+  traefik-net:
+    external: true
+    name: traefik-net
 
 # =============================================================================
 # Volumes
@@ -87,11 +90,14 @@ services:
     restart: unless-stopped
     networks:
       - orchestrator-net
+      - traefik-net
     ports:
       # Gateway WebSocket
       - "${GATEWAY_PORT:-18789}:18789"
       # Health check endpoint
       - "${GATEWAY_HEALTH_PORT:-18790}:18790"
+      # HTTP for Telegram webhook
+      - "8080:8080"
     volumes:
       # Workspace: CodeFoundry + projects
       - ${PROJECT_DIR}:/workspace:cached
@@ -168,6 +174,13 @@ services:
       - "com.openclaw.service=gateway"
       - "com.openclaw.version=2.0"
       - "com.openclaw.architecture=orchestrator"
+      # Traefik labels for Telegram webhook
+      - "traefik.enable=true"
+      - "traefik.http.services.gateway.loadbalancer.server.port=8080"
+      - "traefik.http.routers.gateway.rule=Host(`ainetic.tech`) && PathPrefix(`/telegram`)"
+      - "traefik.http.routers.gateway.entrypoints=https"
+      - "traefik.http.routers.gateway.tls=true"
+      - "traefik.docker.network=traefik-net"
     deploy:
       resources:
         limits:

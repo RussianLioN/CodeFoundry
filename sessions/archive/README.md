@@ -18,6 +18,7 @@
 | [sessions-12-13.md](./sessions-12-13.md) | #12 - #13 | 2025-02-05 — 2025-02-06 |
 | [sessions-14-16.md](./sessions-14-16.md) | #14 - #16 | 2026-02-06 — 2026-02-09 |
 | [sessions-17.md](./sessions-17.md) | #17 | 2026-02-10 |
+| [sessions-18.md](./sessions-18.md) | #18 | 2026-02-10 |
 
 ---
 

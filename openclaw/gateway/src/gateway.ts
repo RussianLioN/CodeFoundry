@@ -1034,6 +1034,139 @@ if (require.main === module) {
     workspace: process.env.WORKSPACE || '/workspace/system-prompts'
   });
 
+  // Set up HTTP server for Telegram webhook
+  const app = express();
+  app.use(express.json());
+
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  });
+
+  // Telegram webhook endpoint
+  app.post('/telegram', async (req, res) => {
+    console.log('[WEBHOOK] Received Telegram message:', JSON.stringify(req.body, null, 2));
+
+    try {
+      const update = req.body;
+
+      if (!update.message) {
+        return res.sendStatus(200);
+      }
+
+      const chatId = update.message.chat.id;
+      const text = update.message.text;
+
+      if (!text) {
+        return res.sendStatus(200);
+      }
+
+      // Create a temporary session for this request
+      const tempSessionId = `telegram_${chatId}_${Date.now()}`;
+
+      // Create WebSocket-like message
+      const message = {
+        type: 'chat' as const,
+        content: text,
+        sessionId: tempSessionId,
+        userId: update.message.from?.id?.toString(),
+        context: {
+          telegram_chat_id: chatId.toString(),
+          telegram_message_id: update.message.message_id?.toString(),
+        }
+      };
+
+      // Create temporary session context
+      const tempSession = {
+        id: tempSessionId,
+        userId: message.userId,
+        username: update.message.from?.username,
+        startedAt: new Date(),
+        lastActivity: new Date(),
+        messages: [],
+        context: { ...message.context },
+        currentAgent: 'telegram',
+        currentTask: null,
+        projectDir: gateway.workspace,
+      } as any;
+
+      // Store session temporarily
+      (gateway as any).sessions.set(tempSessionId, tempSession);
+
+      // Find WebSocket for this session (will be used for responses)
+      const ws = Array.from((gateway as any).wss.clients).find((client: any) => {
+        const session = (gateway as any).sessions.get(tempSessionId);
+        return session && client === session.ws;
+      });
+
+      if (ws) {
+        (tempSession as any).ws = ws;
+      }
+
+      // Handle the message
+      const response = await (gateway as any).handleMessage(ws || {} as any, message, tempSession);
+
+      // Send response via Telegram API
+      if (response.type === 'complete' && response.content) {
+        console.log('[WEBHOOK] Sending response to Telegram:', response.content);
+
+        const telegramUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+        const telegramResponse = await fetch(telegramUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: response.content,
+            parse_mode: 'Markdown'
+          })
+        });
+
+        if (telegramResponse.ok) {
+          console.log('[WEBHOOK] Response sent successfully');
+        } else {
+          console.error('[WEBHOOK] Failed to send response:', await telegramResponse.text());
+        }
+      } else if (response.type === 'question' && response.data?.question) {
+        // Handle question type
+        const question = response.data.question;
+        let message = `❓ Вопрос:\n\n${question}`;
+
+        if (response.data.options && Array.isArray(response.data.options)) {
+          message += '\n\nВарианты:\n';
+          response.data.options.forEach((opt: string, i: number) => {
+            message += `${i + 1}. ${opt}\n`;
+          });
+        }
+
+        const telegramUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+        await fetch(telegramUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+            parse_mode: 'Markdown'
+          })
+        });
+      }
+
+      // Clean up temporary session
+      (gateway as any).sessions.delete(tempSessionId);
+
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('[WEBHOOK] Error:', error);
+      res.sendStatus(500);
+    }
+  });
+
+  // Start HTTP server
+  const HTTP_PORT = 8080;
+  app.listen(HTTP_PORT, '0.0.0.0', () => {
+    console.log(`[HTTP] Server listening on port ${HTTP_PORT}`);
+    console.log(`[HTTP] Telegram webhook endpoint: http://0.0.0.0:${HTTP_PORT}/telegram`);
+  });
+
   // Graceful shutdown
   process.on('SIGTERM', () => gateway.shutdown());
   process.on('SIGINT', () => gateway.shutdown());

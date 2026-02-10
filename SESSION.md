@@ -28,6 +28,7 @@ Full session history:
 - [@ref: sessions/archive/sessions-01-11.md](sessions/archive/sessions-01-11.md)
 - [@ref: sessions/archive/sessions-12-13.md](sessions/archive/sessions-12-13.md)
 - [@ref: sessions/archive/sessions-14-16.md](sessions/archive/sessions-14-16.md)
-- [@ref: sessions/archive/sessions-17.md](sessions/archive/sessions-17.md) ← **NEW**
+- [@ref: sessions/archive/sessions-17.md](sessions/archive/sessions-17.md)
+- [@ref: sessions/archive/sessions-18.md](sessions/archive/sessions-18.md) ← **NEW**
 
 ---
