@@ -94,10 +94,10 @@ services:
       - "${GATEWAY_HEALTH_PORT:-18790}:18790"
     volumes:
       # Workspace: CodeFoundry + projects
-      - ${WORKSPACE_DIR:-./workspace}:/workspace:cached
+      - ${PROJECT_DIR}:/workspace:cached
 
       # CLI Bridge scripts
-      - ${PROJECT_DIR:-/root/projects/CodeFoundry}/server/scripts:/opt/claude-bridge:ro
+      - ${PROJECT_DIR}/server/scripts:/opt/claude-bridge:ro
 
       # Logs
       - gateway-logs:/app/logs
@@ -126,7 +126,7 @@ services:
       # ============================================================
       - CLI_WRAPPER_PATH=${CLI_WRAPPER_PATH:-/opt/claude-bridge/claude-wrapper.sh}
       - CLAUDE_CODE_CONTAINER=${CLAUDE_CODE_CONTAINER:-claude-code-runner}
-      - WORKSPACE_DIR=${WORKSPACE_DIR:-/workspace}
+      - WORKSPACE_DIR=/workspace
 
       # ============================================================
       # Gateway Configuration
@@ -185,19 +185,23 @@ services:
   # Executes via claude-wrapper.sh
   # -----------------------------------------------------------------------------
   claude-code-runner:
-    image: antoniomika/sish:latest
-    # TODO: Replace with actual Claude Code container image
-    # For now, using a placeholder container for testing
+    build:
+      context: ${PROJECT_DIR}/server/containers/claude-code-runner
+      dockerfile: Dockerfile
+    image: claude-code-runner:latest
     container_name: ${COMPOSE_PROJECT_NAME:-openclaw-orchestrator}-claude-runner
     restart: unless-stopped
     networks:
       - orchestrator-net
     volumes:
       # Workspace: shared with gateway
-      - ${WORKSPACE_DIR:-./workspace}:/workspace:cached
+      - ${PROJECT_DIR}:/workspace:cached
 
       # CLI Bridge scripts
-      - ${PROJECT_DIR:-/root/projects/CodeFoundry}/server/scripts:/opt/claude-bridge:ro
+      - ${PROJECT_DIR}/server/scripts:/opt/claude-bridge:ro
+
+      # Docker socket for Docker-in-Docker capability
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
       # Test logs
       - test-logs:/var/log/tests
@@ -222,24 +226,25 @@ services:
       # Logging
       # ============================================================
       - LOG_LEVEL=${LOG_LEVEL:-debug}
-    command: tail -f /dev/null  # Keep container running
+    command: ["tail", "-f", "/dev/null"]
     healthcheck:
-      test: ["CMD", "test", "-f", "/workspace/package.json"]
-      interval: 60s
+      test: ["CMD", "sh", "-c", "test -d /workspace && test -f /workspace/PROJECT.md"]
+      interval: 30s
       timeout: 5s
       retries: 2
-      start_period: 20s
+      start_period: 10s
     labels:
       - "com.openclaw.service=claude-code-runner"
+      - "com.openclaw.version=1.0.0"
       - "com.openclaw.architecture=orchestrator"
     deploy:
       resources:
         limits:
           cpus: '2'
-          memory: 4G
+          memory: 2G
         reservations:
           cpus: '0.5'
-          memory: 1G
+          memory: 512M
 
   # -----------------------------------------------------------------------------
   # Telegram Bot - Optional Interface
@@ -262,7 +267,7 @@ services:
         condition: service_healthy
     volumes:
       # Workspace: shared with gateway
-      - ${WORKSPACE_DIR:-./workspace}:/workspace:cached
+      - ${PROJECT_DIR}:/workspace:cached
 
       # Bot specific logs
       - gateway-logs:/app/logs
