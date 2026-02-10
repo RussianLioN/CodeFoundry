@@ -1103,8 +1103,28 @@ if (require.main === module) {
         (tempSession as any).ws = ws;
       }
 
-      // Handle the message
-      const response = await (gateway as any).handleMessage(ws || {} as any, message, tempSession);
+      // Handle the message - directly call handleChat for HTTP endpoint
+      let response: any;
+
+      // Determine message type
+      const lowerContent = text.toLowerCase();
+
+      if (lowerContent === '/status') {
+        response = {
+          type: 'complete',
+          sessionId: tempSessionId,
+          content: `Статус сессии:\n\nАгент: ${tempSession.currentAgent}\nСообщений: ${tempSession.messages.length}`
+        };
+      } else if (lowerContent === '/help' || lowerContent === 'помощь') {
+        response = {
+          type: 'complete',
+          sessionId: tempSessionId,
+          content: gateway.getHelpText()
+        };
+      } else {
+        // Call handleChat for regular messages
+        response = await gateway.handleChat(message, tempSession);
+      }
 
       // Send response via Telegram API
       if (response.type === 'complete' && response.content) {
