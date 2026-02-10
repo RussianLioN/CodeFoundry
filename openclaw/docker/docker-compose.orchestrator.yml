@@ -98,7 +98,7 @@ services:
       # Health check endpoint
       - "${GATEWAY_HEALTH_PORT:-18790}:18790"
       # HTTP for Telegram webhook
-      - "8080:8080"
+      - "8081:8081"
     volumes:
       # Workspace: CodeFoundry + projects
       - ${PROJECT_DIR}:/workspace:cached
@@ -177,7 +177,7 @@ services:
       - "com.openclaw.architecture=orchestrator"
       # Traefik labels for Telegram webhook
       - "traefik.enable=true"
-      - "traefik.http.services.gateway.loadbalancer.server.port=8080"
+      - "traefik.http.services.gateway.loadbalancer.server.port=8081"
       - "traefik.http.routers.gateway.rule=Host(`ainetic.tech`) && PathPrefix(`/telegram`)"
       - "traefik.http.routers.gateway.entrypoints=https"
       - "traefik.http.routers.gateway.tls=true"

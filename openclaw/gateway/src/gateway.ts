@@ -1161,7 +1161,7 @@ if (require.main === module) {
   });
 
   // Start HTTP server
-  const HTTP_PORT = 8080;
+  const HTTP_PORT = parseInt(process.env.HTTP_PORT || '8081');
   app.listen(HTTP_PORT, '0.0.0.0', () => {
     console.log(`[HTTP] Server listening on port ${HTTP_PORT}`);
     console.log(`[HTTP] Telegram webhook endpoint: http://0.0.0.0:${HTTP_PORT}/telegram`);
