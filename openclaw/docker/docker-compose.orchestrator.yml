@@ -179,8 +179,9 @@ services:
       - "traefik.enable=true"
       - "traefik.http.services.gateway.loadbalancer.server.port=8081"
       - "traefik.http.routers.gateway.rule=Host(`ainetic.tech`) && PathPrefix(`/telegram`)"
-      - "traefik.http.routers.gateway.entrypoints=https"
+      - "traefik.http.routers.gateway.entrypoints=websecure"
       - "traefik.http.routers.gateway.tls=true"
+      - "traefik.http.routers.gateway.tls.certresolver=letsencrypt"
       - "traefik.docker.network=traefik-net"
     deploy:
       resources:
