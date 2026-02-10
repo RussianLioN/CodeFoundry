@@ -346,12 +346,15 @@ class OpenClawGateway {
   private async handleChat(message: WebSocketMessage, session: SessionContext): Promise<ResponseMessage> {
     const content = message.content.trim();
 
+    // Use sessionId from message if provided, otherwise use session.id
+    const responseSessionId = message.sessionId || session.id;
+
     // Check for basic commands
     const lowerContent = content.toLowerCase();
     if (lowerContent === 'help' || lowerContent === 'помощь') {
       return {
         type: 'complete',
-        sessionId: session.id,
+        sessionId: responseSessionId,
         content: this.getHelpText(),
       };
     }
@@ -359,14 +362,14 @@ class OpenClawGateway {
     if (lowerContent === 'exit' || lowerContent === 'выход') {
       return {
         type: 'complete',
-        sessionId: session.id,
+        sessionId: responseSessionId,
         content: '[GOODBYE] До свидания! Сессия завершена.'
       };
     }
 
     try {
       // v2.0: Generate command from NLP
-      await this.streamProgress(session, {
+      await this.streamProgress(session, responseSessionId, {
         stage: 'parsing',
         progress: 10,
         message: 'Анализирую запрос...'
@@ -383,7 +386,7 @@ class OpenClawGateway {
       console.log(`[GATEWAY] Generated command: ${commandRequest.command} (id: ${commandRequest.id})`);
 
       // v2.0: Execute via CLI Bridge
-      await this.streamProgress(session, {
+      await this.streamProgress(session, responseSessionId, {
         stage: 'executing',
         progress: 30,
         message: `Выполняю команду: ${commandRequest.command}...`
@@ -392,7 +395,7 @@ class OpenClawGateway {
       const commandResponse = await this.commandExecutor.executeWithProgress(
         commandRequest,
         (stage, progress, message) => {
-          this.streamProgress(session, { stage: stage as any, progress, message });
+          this.streamProgress(session, responseSessionId, { stage: stage as any, progress, message });
         }
       );
 
@@ -400,14 +403,14 @@ class OpenClawGateway {
       if (commandResponse.status === 'success') {
         return {
           type: 'complete',
-          sessionId: session.id,
+          sessionId: responseSessionId,
           content: commandResponse.message || 'Команда выполнена успешно!',
           data: commandResponse.result,
         };
       } else {
         return {
           type: 'error',
-          sessionId: session.id,
+          sessionId: responseSessionId,
           content: commandResponse.error?.message || 'Ошибка выполнения команды',
           data: commandResponse.error,
         };
@@ -418,7 +421,7 @@ class OpenClawGateway {
       if (error instanceof AmbiguityError) {
         return {
           type: 'question',
-          sessionId: session.id,
+          sessionId: responseSessionId,
           question: error.message,
           options: error.options,
         };
@@ -430,7 +433,7 @@ class OpenClawGateway {
 
       try {
         console.log('[GATEWAY] About to call streamProgress...');
-        await this.streamProgress(session, {
+        await this.streamProgress(session, responseSessionId, {
           stage: 'routing',
           progress: 50,
           message: 'Обрабатываю свободный чат...'
@@ -453,7 +456,7 @@ class OpenClawGateway {
 
         return {
           type: 'complete',
-          sessionId: session.id,
+          sessionId: responseSessionId,
           content: response,
         };
       } catch (chatError) {
@@ -461,7 +464,7 @@ class OpenClawGateway {
 
         return {
           type: 'error',
-          sessionId: session.id,
+          sessionId: responseSessionId,
           content: `Ошибка обработки сообщения: ${chatError.message}`,
         };
       }
@@ -806,8 +809,10 @@ Location: ${project_name}/.claude/
   /**
    * Stream progress to WebSocket client
    */
-  private async streamProgress(session: SessionContext, update: ProgressUpdate): Promise<void> {
-    console.log('[STREAM_PROGRESS] Called for session:', session.id, 'update:', update);
+  private async streamProgress(session: SessionContext, responseSessionId?: string, update?: ProgressUpdate): Promise<void> {
+    const sessionId = responseSessionId || session.id;
+    console.log(`[STREAM_PROGRESS] Called for session: ${session.id}, responseSessionId: ${responseSessionId || 'none'}, using: ${sessionId}`);
+
     const ws = this.getWebSocket(session.id);
     console.log('[STREAM_PROGRESS] WebSocket found:', !!ws);
     if (!ws) {
@@ -818,7 +823,7 @@ Location: ${project_name}/.claude/
     console.log('[STREAM_PROGRESS] Sending message...');
     this.sendMessage(ws, {
       type: 'progress',
-      sessionId: session.id,
+      sessionId: sessionId,
       ...update
     });
     console.log('[STREAM_PROGRESS] Message sent successfully');
