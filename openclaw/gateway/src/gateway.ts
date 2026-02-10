@@ -227,6 +227,29 @@ class OpenClawGateway {
 
     this.sessions.set(sessionId, session);
 
+    // Store WebSocket reference in session
+    (session as any).ws = ws;
+
+    // Set up message handler for this connection
+    ws.on('message', async (data: Buffer) => {
+      try {
+        const message: WebSocketMessage = JSON.parse(data.toString());
+        await this.handleMessage(ws, message, session);
+      } catch (error) {
+        console.error(`[ERROR] Failed to parse message:`, error);
+        this.sendMessage(ws, {
+          type: 'error',
+          sessionId: session.id,
+          content: 'Failed to parse message. Expected valid JSON.'
+        });
+      }
+    });
+
+    // Set up close handler
+    ws.on('close', () => {
+      this.handleClose(sessionId);
+    });
+
     // Send welcome message
     this.sendMessage(ws, {
       type: 'complete',
@@ -237,7 +260,7 @@ class OpenClawGateway {
 
 Команды:
 • "Создай проект [тип] [название]"
-• "Сгенерируй агентов для [проекта]"
+• "Сгенерируй агенты для [проекта]"
 • "Задеплой на [окружение]"
 • "Покажи статус"
 
