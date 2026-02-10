@@ -82,3 +82,31 @@ export interface GatewayResponse {
   error?: string;
   sessionId?: string;
 }
+
+// Command Protocol v1.0 - OpenClaw ↔ Claude Code CLI Bridge
+export interface CommandProtocolRequest {
+  version: string;
+  id: string;
+  timestamp: string;
+  command: string;
+  params: Record<string, any>;
+  context?: {
+    user_id?: string;
+    session_id?: string;
+    request_id?: string;
+  };
+}
+
+export interface CommandProtocolResponse {
+  version: string;
+  id: string;
+  status: 'success' | 'error';
+  result?: any;
+  message?: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, any>;
+  };
+  timestamp: string;
+}

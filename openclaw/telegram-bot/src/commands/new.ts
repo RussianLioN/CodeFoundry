@@ -3,7 +3,8 @@
  * /new command - Create new project
  */
 
-import { CommandContext, ProgressUpdate } from '../types';
+import { v4 as uuidv4 } from 'uuid';
+import { CommandContext, ProgressUpdate, CommandProtocolRequest } from '../types';
 import { logger } from '../utils/logger';
 
 export async function newCommand(ctx: CommandContext): Promise<string> {
@@ -51,17 +52,27 @@ export async function newCommand(ctx: CommandContext): Promise<string> {
     return '❌ *Gateway не подключен*\n\nПопробуйте позже.';
   }
 
-  // Prepare intent message
-  const content = `Создай проект ${projectType} ${projectName}`;
+  // Prepare Command Protocol v1.0 request
+  const commandRequest: CommandProtocolRequest = {
+    version: '1.0',
+    id: uuidv4(),
+    timestamp: new Date().toISOString(),
+    command: 'create_project',
+    params: {
+      name: projectName,
+      archetype: projectType,
+      options: options.length > 0 ? options : undefined,
+    },
+    context: {
+      user_id: user.id.toString(),
+      session_id: session.sessionId,
+    },
+  };
 
   try {
-    // Send to Gateway with progress tracking
-    const response = await gateway.sendMessageWithProgress(
-      {
-        type: 'chat',
-        content,
-        userId: user.id.toString(),
-      },
+    // Send Command Protocol v1.0 request to Gateway with progress tracking
+    const response = await gateway.sendJSON(
+      commandRequest,
       (update: ProgressUpdate) => {
         // Progress callback - send updates to user
         logger.info(`Progress: ${update.progress}% - ${update.message}`);

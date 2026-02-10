@@ -5,7 +5,7 @@
 
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
-import { GatewayMessage, GatewayResponse, ProgressUpdate } from './types';
+import { GatewayMessage, GatewayResponse, ProgressUpdate, CommandProtocolRequest } from './types';
 import { logger } from './utils/logger';
 
 export class GatewayClient {
@@ -219,6 +219,31 @@ export class GatewayClient {
       content,
       userId,
     });
+  }
+
+  /**
+   * Send Command Protocol v1.0 JSON request
+   */
+  async sendJSON(
+    commandRequest: CommandProtocolRequest,
+    onProgress?: (update: ProgressUpdate) => void,
+    sessionId?: string
+  ): Promise<GatewayResponse> {
+    const sid = sessionId || uuidv4();
+
+    // Set up progress handler if provided
+    if (onProgress) {
+      this.progressHandlers.set(sid, onProgress);
+    }
+
+    // Convert Command Protocol request to Gateway message
+    const gatewayMessage: GatewayMessage = {
+      type: 'chat',
+      content: JSON.stringify(commandRequest),
+      sessionId: sid,
+    };
+
+    return this.sendMessage(gatewayMessage, sid);
   }
 
   /**
