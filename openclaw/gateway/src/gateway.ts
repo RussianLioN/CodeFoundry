@@ -424,14 +424,42 @@ class OpenClawGateway {
         };
       }
 
-      // Handle other errors
-      console.error('[GATEWAY] Command execution error:', error);
+      // Fallback to free-form chat if command generation fails
+      console.log('[GATEWAY] Command generation failed, falling back to free-form chat');
 
-      return {
-        type: 'error',
-        sessionId: session.id,
-        content: `Ошибка: ${error.message}`,
-      };
+      try {
+        await this.streamProgress(session, {
+          stage: 'routing',
+          progress: 50,
+          message: 'Обрабатываю свободный чат...'
+        });
+
+        // Build chat messages with history context
+        const chatMessages = [
+          { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian.' },
+          ...session.messages.slice(-5).map(m => ({
+            role: 'user',
+            content: m.content
+          })),
+          { role: 'user', content }
+        ];
+
+        const response = await this.ollama.chat(chatMessages);
+
+        return {
+          type: 'complete',
+          sessionId: session.id,
+          content: response,
+        };
+      } catch (chatError) {
+        console.error('[GATEWAY] Free-form chat error:', chatError);
+
+        return {
+          type: 'error',
+          sessionId: session.id,
+          content: `Ошибка обработки сообщения: ${chatError.message}`,
+        };
+      }
     }
   }
 
