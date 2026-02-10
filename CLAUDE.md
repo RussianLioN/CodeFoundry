@@ -62,6 +62,7 @@ production → Docker available
 | Deploy | Git commit → push |
 | Quality | `make gate-blocking` or `/cf-health` |
 | Aliases | [@ref: docs/SHELL-ALIASES.md](docs/SHELL-ALIASES.md) |
+| Lessons Learned | [@ref: docs/lessons/claude-code-skills-vs-commands.md](docs/lessons/claude-code-skills-vs-commands.md) |
 
 ---
 

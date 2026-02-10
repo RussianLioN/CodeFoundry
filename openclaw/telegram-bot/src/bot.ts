@@ -203,6 +203,23 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
       return;
     }
 
+    // Handle different response types
+    if (response.type === 'question') {
+      // Handle question/clarification request
+      const question = response.data?.question || response.content || 'Уточните запрос';
+      let message = `❓ *Вопрос*\n\n${question}`;
+
+      if (response.data?.options && Array.isArray(response.data.options)) {
+        message += '\n\n*Варианты:*\n';
+        response.data.options.forEach((opt: string, i: number) => {
+          message += `${i + 1}. ${opt}\n`;
+        });
+      }
+
+      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      return;
+    }
+
     // Send final response
     if (response.content) {
       await bot.sendMessage(chatId, response.content, { parse_mode: 'Markdown' });
