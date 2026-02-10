@@ -129,6 +129,11 @@ services:
       - OLLAMA_TIMEOUT=${OLLAMA_TIMEOUT:-60000}
 
       # ============================================================
+      # Telegram Bot Configuration (for webhook responses)
+      # ============================================================
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+
+      # ============================================================
       # CLI Bridge Configuration (NEW in v2.0)
       # ============================================================
       - CLI_WRAPPER_PATH=${CLI_WRAPPER_PATH:-/opt/claude-bridge/claude-wrapper.sh}
