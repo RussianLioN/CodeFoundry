@@ -73,9 +73,6 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/dist ./dist
 
-# Copy configuration (from parent config directory)
-COPY ../config/openclaw.json /app/config/
-
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -u 1001 -S nodejs -G nodejs
