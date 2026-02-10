@@ -131,7 +131,7 @@
 | Категория | Описание |
 |-----------|----------|
 | [GitOps](../automation/gitops/README.md) | GitOps 2.0 workflows |
-| [Scripts](../automation/scripts/README.md) | Скрипты автоматизации |
+| [Scripts](../scripts/README.md) | 📜 Все скрипты + GitHub Secrets setup ⭐ |
 | [Hooks](../automation/hooks/README.md) | Git hooks |
 
 ### 📊 Observability
@@ -219,6 +219,8 @@
 Последнее обновление: 2026-02-10
 
 Изменения:
+- ✅ **[2026-02-10]** Добавлен автоматический скрипт setup-github-secrets.sh
+- ✅ **[2026-02-10]** Создана документация scripts/README.md
 - ✅ **[2026-02-10]** Добавлена документация по GitHub Actions Secrets Setup
 - ✅ Добавлены разделы Sessions и Tasks с архивами (Phase 14 Housekeeping)
 - ✅ Добавлена ссылка на Workflow Guide
