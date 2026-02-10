@@ -20,8 +20,8 @@ RUN apk add --no-cache \
     bash \
     git
 
-# Copy package files (from gateway subdirectory)
-COPY gateway/package*.json ./
+# Copy package files (context is gateway directory)
+COPY package*.json ./
 RUN npm install
 
 # ============================================================
@@ -44,9 +44,9 @@ RUN apk add --no-cache \
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY --from=dependencies /app/package*.json ./
 
-# Copy source code and tsconfig (from gateway subdirectory)
-COPY gateway/src ./src
-COPY gateway/tsconfig.json ./
+# Copy source code and tsconfig (context is gateway directory)
+COPY src ./src
+COPY tsconfig.json ./
 
 # Build TypeScript
 RUN npm run build
@@ -73,8 +73,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/dist ./dist
 
-# Copy configuration (from config directory)
-COPY config/openclaw.json /app/config/
+# Copy configuration (from parent config directory)
+COPY ../config/openclaw.json /app/config/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
