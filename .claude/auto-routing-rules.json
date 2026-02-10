@@ -473,6 +473,72 @@
       }
     },
     {
+      "id": "expert-consilium",
+      "name": "Expert Consilium",
+      "priority": 95,
+      "agent": "expert-consilium",
+      "command": "expert-consilium",
+      "triggers": {
+        "keywords": [
+          "expert analysis",
+          "expert debate",
+          "consensus",
+          "technical decision",
+          "expert opinion",
+          "multi-expert",
+          "should i",
+          "экспертный анализ",
+          "консенсус",
+          "экспертное мнение"
+        ],
+        "patterns": [
+          "(run |launch )?expert (analysis|consilium|debate)",
+          "what do (the )?experts think",
+          "get expert (opinions|feedback)",
+          "should i (adopt|migrate|use|implement) (.+)",
+          "экспертный анализ по (.+)",
+          "запусти экспертный консилиум"
+        ]
+      },
+      "context": {
+        "decisionMaking": true,
+        "multiExpert": true,
+        "complexDecision": true
+      }
+    },
+    {
+      "id": "expert-consilium-v2",
+      "name": "Expert Consilium v2.0",
+      "priority": 96,
+      "agent": "expert-consilium-v2",
+      "command": "expert-consilium-v2",
+      "triggers": {
+        "keywords": [
+          "expert teams",
+          "agent teams",
+          "multi-round debate",
+          "adversarial experts",
+          "expert v2",
+          "экспертные команды",
+          "многораундовые дебаты"
+        ],
+        "patterns": [
+          "(run |launch )?expert.*v2",
+          "(run |launch )?expert.*teams",
+          "expert.*consilium.*v2",
+          "(run |launch )?agent.*teams.*expert",
+          "запусти эксперт.*v2",
+          "эксперт.*команд"
+        ]
+      },
+      "context": {
+        "decisionMaking": true,
+        "multiExpert": true,
+        "complexDecision": true,
+        "agentTeams": true
+      }
+    },
+    {
       "id": "deployment",
       "name": "Deployment",
       "priority": 100,

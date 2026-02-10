@@ -63,6 +63,8 @@
             "tasks-sync",
             "ollama-gemini-researcher",
             "backup-coordinator",
+            "expert-consilium",
+            "expert-consilium-v2",
             "code_assistant",
             "reviewer",
             "documentation-agent"

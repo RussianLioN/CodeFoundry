@@ -182,6 +182,7 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
       async (update) => {
         // Progress update - send to user
         const progress = Math.round(update.progress || 0);
+        logger.info(`Progress update: ${progress}% - ${update.message}`);
         await bot.sendMessage(
           chatId,
           `${getProgressEmoji(progress)} ${update.message}\nПрогресс: ${progress}%`,
@@ -190,6 +191,8 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
       },
       session.sessionId
     );
+
+    logger.info(`Received response from Gateway: type=${response.type}, has content=${!!response.content}, has error=${!!response.error}`);
 
     if (response.error) {
       await bot.sendMessage(

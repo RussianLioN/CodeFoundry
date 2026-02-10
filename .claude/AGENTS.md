@@ -53,6 +53,15 @@ CodeFoundry uses **specialized subagents** launched via the `Task` tool. The mai
 - **Triggers:** "backup", "rollback", "validate backup", "agent teams safety"
 - **Commands:** `make backup-create`, `make backup-validate`, `make backup-rollback`
 
+### expert-consilium
+
+- **File:** `agents/expert-consilium.md`
+- **Model:** sonnet
+- **Role:** Multi-expert analysis for complex technical decisions (13 virtual experts)
+- **Triggers:** "expert analysis", "debate", "consensus", "technical decision"
+- **Command:** `/expert-consilium`
+- **Documentation:** [docs/agents/expert-consilium.quick.md](../docs/agents/expert-consilium.quick.md)
+
 ---
 
 ## Built-in Agent Types (Task tool)

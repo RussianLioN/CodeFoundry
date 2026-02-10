@@ -91,7 +91,7 @@ export class GatewayClient {
     try {
       const response: GatewayResponse = JSON.parse(data);
 
-      logger.debug('Received from Gateway:', response);
+      logger.info('[GATEWAY_CLIENT] Received message type:', response.type, 'sessionId:', response.sessionId, 'has content:', !!response.content);
 
       // Handle different message types
       switch (response.type) {

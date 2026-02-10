@@ -97,6 +97,7 @@ Report: docs/analysis/2026-02-10-consilium-bash-python.md
 - **Full docs:** [expert-consilium.md](../../.claude/skills/expert-consilium.md)
 - **Command:** [.claude/commands/expert-consilium.md](../../.claude/commands/expert-consilium.md)
 - **Examples:** [docs/examples/expert-consilium-example.md](../examples/expert-consilium-example.md)
+- **⭐ 13 Experts Parallel:** [docs/reference/expert-consilium-13-experts.md](../reference/expert-consilium-13-experts.md) — **Критично!**
 
 ---
 
