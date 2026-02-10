@@ -135,11 +135,16 @@ export class GatewayClient {
    * Handle complete response
    */
   private handleComplete(response: GatewayResponse): void {
+    logger.info(`[HANDLE_COMPLETE] sessionId=${response.sessionId}, hasHandler=${this.messageHandlers.has(response.sessionId || '')}`);
+
     if (response.sessionId) {
       const handler = this.messageHandlers.get(response.sessionId);
       if (handler) {
+        logger.info(`[HANDLE_COMPLETE] Calling handler for sessionId=${response.sessionId}`);
         handler(response);
         this.messageHandlers.delete(response.sessionId);
+      } else {
+        logger.warn(`[HANDLE_COMPLETE] No handler found for sessionId=${response.sessionId}`);
       }
       // Also clear progress handler
       this.progressHandlers.delete(response.sessionId);
@@ -179,8 +184,11 @@ export class GatewayClient {
       const sid = sessionId || uuidv4();
       message.sessionId = sid;
 
+      logger.info(`[SEND_MESSAGE] sessionId=${sid}, type=${message.type}`);
+
       // Set up response handler
       this.messageHandlers.set(sid, (response) => {
+        logger.info(`[MESSAGE_HANDLER] Called for sessionId=${sid}, responseType=${response.type}`);
         if (response.error) {
           reject(new Error(response.error));
         } else {
