@@ -6,13 +6,24 @@
 
 ## 🔴 P0: Session Start (MANDATORY)
 
-**Execute FIRST:** [@ref: instructions/git-sync.md](instructions/git-sync.md)
+**Execute FIRST:**
 
-```bash
-git fetch origin && git status
-```
+1. **Check project status** — [@ref: TASKS.md](TASKS.md) ← **READ THIS FIRST!**
+   - What's completed? (Phase 8.5 = 25%, Phase 11 = 75%)
+   - What's in progress? (active tasks)
+   - What's blocked? (dependencies)
 
-**Then:** [@ref: SESSION.md](SESSION.md) → [@ref: instructions/session-init.md](instructions/session-init.md)
+2. **Git sync** — [@ref: instructions/git-sync.md](instructions/git-sync.md)
+   ```bash
+   git fetch origin && git status
+   ```
+
+3. **Session context** — [@ref: SESSION.md](SESSION.md)
+   - Recent changes
+   - Current focus
+   - Known issues
+
+**🚨 NEVER skip TASKS.md check!** This prevents duplicate work on completed tasks.
 
 ---
 
