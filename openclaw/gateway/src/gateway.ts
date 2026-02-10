@@ -367,6 +367,49 @@ class OpenClawGateway {
       };
     }
 
+    // ============================================================
+    // INTENT PRE-CLASSIFIER (Performance Optimization)
+    // Skip command generation for non-command messages
+    // This prevents double AI calls for free-form chat
+    // ============================================================
+
+    const COMMAND_KEYWORDS = [
+      'create', 'new', 'созда', 'новый', 'проект', 'project',
+      'status', 'статус', 'состояни',
+      'deploy', 'деплой', 'запуск',
+      'build', 'собери', 'сборк',
+      'test', 'тест', 'провер',
+      '/help', '/status', '/new', '/deploy'
+    ];
+
+    const hasCommandIntent = COMMAND_KEYWORDS.some(keyword =>
+      lowerContent.includes(keyword)
+    );
+
+    // If no command intent detected, go directly to free-form chat
+    // This skips the expensive command generation step
+    if (!hasCommandIntent) {
+      console.log('[INTENT] No command keywords detected, using free-form chat directly');
+
+      // Build chat messages with history context
+      const chatMessages = [
+        { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian. Be concise and friendly.' },
+        ...session.messages.slice(-5).map(m => ({
+          role: 'user',
+          content: m.content
+        })),
+        { role: 'user', content }
+      ];
+
+      const response = await this.ollama.chat(chatMessages);
+
+      return {
+        type: 'complete',
+        sessionId: responseSessionId,
+        content: response || 'Извините, не удалось сгенерировать ответ.'
+      };
+    }
+
     try {
       // v2.0: Generate command from NLP
       await this.streamProgress(session, responseSessionId, {
