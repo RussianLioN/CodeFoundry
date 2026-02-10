@@ -88,6 +88,7 @@
 |----------|----------|
 | [Remote Paths](REMOTE-PATHS.md) | Пути на удалённом сервере |
 | [Shell Aliases](SHELL-ALIASES.md) | Полезные shell aliases |
+| [GitHub Actions Secrets Setup](github-actions-secrets-setup.md) | 🔑 Настройка secrets для remote sync |
 | [Testing](TESTING.md) | Тестирование проекта |
 | [System Update](native-claude-code-sys-update.md) | Обновление Claude Code |
 
@@ -215,9 +216,10 @@
 
 ## 🔄 История Изменений
 
-Последнее обновление: 2026-02-09
+Последнее обновление: 2026-02-10
 
 Изменения:
+- ✅ **[2026-02-10]** Добавлена документация по GitHub Actions Secrets Setup
 - ✅ Добавлены разделы Sessions и Tasks с архивами (Phase 14 Housekeeping)
 - ✅ Добавлена ссылка на Workflow Guide
 - ✅ Добавлен раздел OpenClaw
