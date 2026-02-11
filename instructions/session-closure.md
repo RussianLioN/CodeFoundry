@@ -85,7 +85,7 @@ git push origin main
 ## 📚 History
 
 Full session history:
-- [@ref: sessions/archive/sessions-XX.md](sessions/archive/sessions-XX.md) ← **NEW**
+- [sessions/archive/sessions-XX.md](sessions/archive/sessions-XX.md) ← **NEW** (replace XX with session number)
 ```
 
 **Archive file format (sessions/archive/sessions-XX.md):**

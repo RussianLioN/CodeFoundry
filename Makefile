@@ -281,6 +281,10 @@ backup-clean: ## Remove old backups (older than 7 days)
 test-backup: ## Run backup coordinator safety checks
 	@./tests/backup/safety-check.sh
 
+.PHONY: backup-lessons
+backup-lessons: ## Backup LESSONS.md and .tracking/ directory
+	@$(SCRIPTS_DIR)/backup-lessons.sh
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Docker
 # ═══════════════════════════════════════════════════════════════════════════════

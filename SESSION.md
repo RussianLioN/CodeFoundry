@@ -6,22 +6,26 @@
 
 ## 📌 Current Context
 
-**Last Session:** #19 (2026-02-10)
-**Focus:** OpenClaw Orchestrator Performance + Critical Architecture Bug
-**Progress:** 🔴 CRITICAL BUG DISCOVERED in Intent Pre-Classifier
+**Current Session:** #20 (2026-02-11)
+**Focus:** Expert Consilium v2.0 + Lesson Extraction System
+**Progress:** ✅ Automated lesson system + Quality gates integration
 
-**Current Issues:**
-- 🔴 **ORCH-007.5:** Intent Pre-Classifier breaks OpenClaw architecture
-  - OpenClaw now bypasses command generation for free-form messages
-  - Defeats the purpose of using AI for NLP intent recognition
-  - Needs fix: improve system prompt OR remove pre-classifier
+**Current Achievements:**
+- ✅ Lesson Learned Tracker implemented (auto-extracts from 3+ errors)
+- ✅ Settings management system (validate, sanitize, backup, restore)
+- ✅ Quality gates expanded (B8: Settings, I8: Lessons)
+- ✅ Expert Consilium v2.0 debates (4 domains, 13 experts)
+- ✅ Backup strategy for .tracking/ (30-day retention)
 
-**Last Achievements:**
+**Previous Session (#19, 2026-02-10):**
+- 🔴 CRITICAL BUG: Intent Pre-Classifier breaks OpenClaw architecture
 - ✅ Webhook optimization: 50% faster responses
-- ✅ CLI Bridge permission error fixed
-- ⚠️ BUT: OpenClaw architecture compromised
+- ⚠️ OpenClaw architecture compromised
 
-**Lessons Learned:** Performance optimization shouldn't break core architecture
+**Lessons Learned:**
+- Automated remediation > manual prohibitions
+- Layered defense (validation + sanitization + backup)
+- Expert consilium valuable for meta-problems
 
 **Next Steps:** See [@ref: TASKS.md](TASKS.md)
 

@@ -231,6 +231,17 @@ print('\n'.join(sorted(agents)))
     else
         gate_fail "BLOCKING" "Required project files exist" "$missing_files required file(s) missing"
     fi
+
+    # ─── Gate B8: Settings Validation ───────────────────────────────────────
+    if [ -f ".claude/settings.local.json" ]; then
+        if python3 "$SCRIPT_DIR/validate-settings.py" >/dev/null 2>&1; then
+            gate_pass "BLOCKING" "Settings validation"
+        else
+            gate_fail "BLOCKING" "Settings validation" "Run: make settings-sanitize"
+        fi
+    else
+        gate_pass "BLOCKING" "Settings validation (no settings file)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -366,6 +377,23 @@ run_info_gates() {
             detail="${detail}${orphan_docs} doc(s) not in INDEX.md"
         }
         gate_warn "INFO" "Document integration" "$detail"
+    fi
+
+    # ─── Gate I8: Lesson Extraction (non-blocking) ────────────────────────
+    if [ -f "scripts/lesson-learned-tracker.py" ]; then
+        local lesson_output
+        lesson_output=$(python3 scripts/lesson-learned-tracker.py extract 2>&1 || true)
+
+        if echo "$lesson_output" | grep -q "LESSON LEARNED"; then
+            gate_warn "INFO" "Lesson extraction" "New lessons extracted (see LESSONS.md)"
+            echo "$lesson_output" | grep "LESSON LEARNED" | while IFS= read -r line; do
+                printf "        ${DIM}→ %s${NC}\n" "$line"
+            done
+        else
+            gate_pass "INFO" "Lesson extraction (no new lessons)"
+        fi
+    else
+        gate_pass "INFO" "Lesson extraction (tracker not found)"
     fi
 }
 
