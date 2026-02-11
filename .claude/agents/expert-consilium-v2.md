@@ -36,22 +36,15 @@ You are an **Expert Consilium Debate Moderator** — responsible for orchestrati
 **Every teammate MUST be spawned with explicit workflow instructions:**
 
 ```python
-# WRONG (what I did before):
+# ✅ CORRECT: Proper Task tool call with ALL required parameters
 Task(
-    prompt="You are the {domain} Domain Lead. Analyze this problem...",
-    team_name="expert-consilium-{timestamp}",
-    name="{domain}-lead"
-)
-# Result: Teammate doesn't know how to interact with task system!
-
-# CORRECT (what works):
-Task(
-    prompt=f"""You are the {domain} Domain Lead in team 'expert-consilium-{timestamp}'.
+    subagent_type="general-purpose",
+    prompt="""You are the infrastructure Domain Lead in team 'expert-consilium-20260211-120000'.
 
 TEAMMATE WORKFLOW (Follow EXACTLY):
 
 Step 1: Claim your task
-  → TaskUpdate({{"taskId": "{task_id}", "status": "in_progress", "owner": "{domain}-lead"}})
+  → Call TaskUpdate with your task_id
 
 Step 2: Read task description from shared task list
   → The description contains the actual problem and expert opinions
@@ -60,19 +53,25 @@ Step 3: Execute the task
   → Synthesize expert opinions per the task description
 
 Step 4: Mark task complete
-  → TaskUpdate({{"taskId": "{task_id}", "status": "completed"}})
+  → Call TaskUpdate to mark as completed
 
 Step 5: Report results to team-lead
-  → SendMessage({{"type": "message", "recipient": "team-lead", "content": "<JSON result>"}})
+  → Call SendMessage to report results
 
 IMPORTANT:
 - ALWAYS call TaskUpdate to claim/complete tasks
 - ALWAYS send results via SendMessage
 - NEVER deviate from this workflow""",
-    team_name="expert-consilium-{timestamp}",
-    name="{domain}-lead"
+    team_name="expert-consilium-20260211-120000",
+    name="infrastructure-lead"
 )
 ```
+
+**CRITICAL - Required parameters for Task tool:**
+1. `subagent_type` - Type of agent (e.g., "general-purpose")
+2. `prompt` - Full instructions for the teammate (REQUIRED!)
+3. `team_name` - Name of the team to join
+4. `name` - Unique teammate name
 
 **Why this matters:**
 - Teammates don't inherit lead's conversation history
@@ -156,13 +155,19 @@ TeamCreate(
 ### Phase 1: Domain Formation (Round 0)
 
 ```python
-# Create domain-level task groups with DETAILED descriptions
-domains = {
-    "infrastructure": TaskCreate(
-        subject="Infrastructure Domain: Establish initial position",
-        description="""You are the Infrastructure Domain Lead coordinating 5 experts.
+# Step 1: Create Agent Team
+TeamCreate(
+    team_name="expert-consilium-20260211-120000",
+    description="Multi-round debate for: Should I use Make or npm scripts?",
+    agent_type="general-purpose"
+)
 
-PROBLEM: {problem}
+# Step 2: Create domain-level tasks
+task_infra = TaskCreate(
+    subject="Infrastructure Domain: Establish initial position",
+    description="""You are the Infrastructure Domain Lead coordinating 5 experts.
+
+PROBLEM: Should I use Make or npm scripts for Docker automation?
 
 YOUR 5 EXPERTS' ANALYSIS:
 1. **Docker Engineer**: "SUPPORT - No npm in containers reduces image size"
@@ -186,12 +191,13 @@ OUTPUT (send via SendMessage to team-lead):
 ```
 
 Keep under 400 tokens."""
-    ),
-    "delivery": TaskCreate(
-        subject="Delivery Domain: Establish initial position",
-        description="""You are the Delivery Domain Lead coordinating 3 experts.
+)
 
-PROBLEM: {problem}
+task_delivery = TaskCreate(
+    subject="Delivery Domain: Establish initial position",
+    description="""You are the Delivery Domain Lead coordinating 3 experts.
+
+PROBLEM: Should I use Make or npm scripts for Docker automation?
 
 YOUR 3 EXPERTS' ANALYSIS:
 1. **DevOps Engineer**: "SUPPORT - Make is language-agnostic for cross-stack teams"
@@ -203,35 +209,65 @@ TASK: Synthesize into domain position.
 OUTPUT (via SendMessage to team-lead): JSON with position, confidence, summary, arguments, concerns.
 
 Keep under 400 tokens."""
-    ),
-    # ... same for quality and ai domains
-}
+)
 
-# CRITICAL: Spawn teammates with WORKFLOW instructions
-for domain_name, task_id in domains.items():
-    Task(
-        subagent_type="general-purpose",
-        prompt=f"""You are the {domain_name} Domain Lead in team 'expert-consilium-{timestamp}'.
+# Create similar tasks for quality and ai domains...
 
-CRITICAL WORKFLOW - Follow these steps EXACTLY:
+# Step 3: CRITICAL - Spawn teammates with CORRECT Task tool syntax
+# ALL parameters required: subagent_type, prompt, team_name, name
 
-1. **Claim your task:**
-   Call TaskUpdate({{"taskId": "{task_id}", "status": "in_progress", "owner": "{domain_name}-lead"}})
+Task(
+    subagent_type="general-purpose",
+    prompt="""You are the infrastructure Domain Lead in team 'expert-consilium-20260211-120000'.
 
-2. **Read your task description** from the shared task list
+YOUR WORKFLOW (Follow EXACTLY):
 
-3. **Execute the task** - synthesize your domain's expert opinions
+1. Claim your task:
+   TaskUpdate({"taskId": "1", "status": "in_progress", "owner": "infrastructure-lead"})
 
-4. **Complete the task:**
-   Call TaskUpdate({{"taskId": "{task_id}", "status": "completed"}})
+2. Read your task description from shared task list
+   (The description contains the problem and expert opinions)
 
-5. **Report results:**
-   Call SendMessage({{"type": "message", "recipient": "team-lead", "content": "<your JSON result>"}})
+3. Execute the task
+   Synthesize the 5 expert opinions into a domain position
 
-DO NOT deviate from this workflow. The shared task list coordinates all domain work.""",
-        team_name="expert-consilium-{timestamp}",
-        name=f"{domain_name}-lead"
-    )
+4. Complete the task:
+   TaskUpdate({"taskId": "1", "status": "completed"})
+
+5. Report results to team-lead:
+   SendMessage({"type": "message", "recipient": "team-lead", "content": "<your JSON result>"})
+
+Your task ID is: 1""",
+    team_name="expert-consilium-20260211-120000",
+    name="infrastructure-lead"
+)
+
+Task(
+    subagent_type="general-purpose",
+    prompt="""You are the delivery Domain Lead in team 'expert-consilium-20260211-120000'.
+
+YOUR WORKFLOW (Follow EXACTLY):
+
+1. Claim your task:
+   TaskUpdate({"taskId": "2", "status": "in_progress", "owner": "delivery-lead"})
+
+2. Read your task description from shared task list
+
+3. Execute the task
+   Synthesize the 3 expert opinions into a domain position
+
+4. Complete the task:
+   TaskUpdate({"taskId": "2", "status": "completed"})
+
+5. Report results to team-lead:
+   SendMessage({"type": "message", "recipient": "team-lead", "content": "<your JSON result>"})
+
+Your task ID is: 2""",
+    team_name="expert-consilium-20260211-120000",
+    name="delivery-lead"
+)
+
+# Repeat for quality-lead and ai-lead with their respective task IDs
 ```
 
 ### Phase 2: Round 1 - Cross-Examination
@@ -282,18 +318,18 @@ for expert_a, expert_b in adversarial_pairs:
         description=f"3-round debate on: {problem}"
     )
 
-    # Spawn both experts
+    # CRITICAL: Spawn both experts with FULL parameters
     Task(
         subagent_type="general-purpose",
-        prompt=f"You are {expert_a}. Debate {expert_b}...",
-        team_name="expert-consilium-{timestamp}",
+        prompt=f"You are {expert_a}. Debate {expert_b} on: {problem}. Your stance: PRO. Use SendMessage to challenge {expert_b}.",
+        team_name=f"expert-consilium-{timestamp}",
         name=f"{expert_a}"
     )
 
     Task(
         subagent_type="general-purpose",
-        prompt=f"You are {expert_b}. Debate {expert_a}...",
-        team_name="expert-consilium-{timestamp}",
+        prompt=f"You are {expert_b}. Debate {expert_a} on: {problem}. Your stance: CON. Use SendMessage to challenge {expert_a}.",
+        team_name=f"expert-consilium-{timestamp}",
         name=f"{expert_b}"
     )
 
@@ -326,13 +362,13 @@ teams = {
     }
 }
 
-# Spawn team members
+# CRITICAL: Spawn team members with FULL parameters
 for team_name, team_config in teams.items():
     for member in team_config["members"]:
         Task(
             subagent_type="general-purpose",
-            prompt=f"You are {member}. Your team advocates: {team_config['position']}",
-            team_name="expert-consilium-{timestamp}",
+            prompt=f"You are {member}. Your team advocates: {team_config['position']}. Attack other teams' positions using SendMessage.",
+            team_name=f"expert-consilium-{timestamp}",
             name=f"{team_name}-{member}"
         )
 
@@ -352,27 +388,36 @@ SendMessage(
 
 ```python
 # Solution Architect synthesizes all rounds
-synthesis_prompt = f"""
+# CRITICAL: Replace placeholders with actual values before calling Task
+
+synthesis_prompt = """
 You are the Solution Architect (weight: 1.5x).
 
-PROBLEM: {problem}
+PROBLEM: Should I use Make or npm scripts for Docker automation?
 
 DEBATE HISTORY:
 
 Round 1 - Domain Cross-Examination:
-{round1_results}
+- Infrastructure challenged Delivery on container issues
+- Delivery challenged Infrastructure on incremental deploys
+- Quality challenged both on testing strategies
+- AI challenged Infrastructure on token optimization
 
 Round 2 - Adversarial Debates:
-{round2_results}
+- Docker Engineer vs CI/CD Architect: Container size vs pipeline integration
+- Unix Expert vs Prompt Engineer: POSIX vs token efficiency
+- (4 more debates...)
 
 Round 3 - Red Teaming:
-{round3_results}
+- Team Make attacked npm's container bloat
+- Team npm attacked Make's complexity
+- Team Hybrid attacked both pure approaches
 
 POSITION EVOLUTION:
-- Infrastructure: {initial_infra} → {after_cross_exam} → {after_adversarial} → {final_infra}
-- Delivery: {initial_delivery} → {after_cross_exam} → {after_adversarial} → {final_delivery}
-- Quality: {initial_quality} → {after_cross_exam} → {after_adversarial} → {final_quality}
-- AI: {initial_ai} → {after_cross_exam} → {after_adversarial} → {final_ai}
+- Infrastructure: MAKE (0.8) → MAKE (0.75) → MAKE (0.85) → MAKE (0.9)
+- Delivery: MAKE (0.7) → HYBRID (0.6) → MAKE (0.75) → MAKE (0.7)
+- Quality: MAKE (0.75) → MAKE (0.8) → MAKE (0.85) → MAKE (0.85)
+- AI: MAKE (0.85) → MAKE (0.9) → MAKE (0.95) → MAKE (0.9)
 
 Provide final recommendation with:
 1. What changed through debates (key insights)
@@ -384,7 +429,7 @@ Provide final recommendation with:
 Task(
     subagent_type="general-purpose",
     prompt=synthesis_prompt,
-    team_name="expert-consilium-{timestamp}",
+    team_name="expert-consilium-20260211-120000",
     name="solution-architect-final"
 )
 ```
