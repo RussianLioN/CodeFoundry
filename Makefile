@@ -204,6 +204,32 @@ lint: ## Lint code (shell scripts, python, etc.)
 		echo "⚠️  shellcheck not found, skipping shell lint"; \
 	fi
 
+.PHONY: test-unit
+test-unit: ## Run unit tests
+	@echo "→ Running unit tests..."
+	@pytest tests/unit/ -v
+
+.PHONY: test-integration
+test-integration: ## Run integration tests
+	@echo "→ Running integration tests..."
+	@pytest tests/integration/ -v
+
+.PHONY: test-e2e
+test-e2e: ## Run end-to-end tests
+	@echo "→ Running E2E tests..."
+	@pytest tests/e2e/ -v
+
+.PHONY: test-all
+test-all: ## Run all pytest tests (unit + integration + e2e)
+	@echo "→ Running all tests..."
+	@pytest tests/ -v --cov=scripts --cov-report=html:htmlcov
+
+.PHONY: test-coverage
+test-coverage: ## Run tests with coverage report
+	@echo "→ Running tests with coverage..."
+	@pytest tests/ --cov=scripts --cov-report=term-missing --cov-report=html:htmlcov
+	@echo "→ Coverage report: htmlcov/index.html"
+
 .PHONY: shell-check
 shell-check: ## Check shell script syntax with shellcheck
 	@./scripts/fix-shell-syntax.sh

@@ -1,0 +1,13 @@
+# Test dependencies for CodeFoundry project
+# Install with: pip install -r requirements-test.txt
+
+# Testing framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# Code quality
+coverage>=7.3.0
+pylint>=3.0.0
+
+# Mocking and fixtures
+pytest-mock>=3.12.0
