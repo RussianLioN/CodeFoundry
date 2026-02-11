@@ -294,6 +294,36 @@ test-backup: ## Run backup coordinator safety checks
 backup-lessons: ## Backup LESSONS.md and .tracking/ directory
 	@$(SCRIPTS_DIR)/backup-lessons.sh
 
+.PHONY: auto-commit-lessons
+auto-commit-lessons: ## GitOps auto-commit for LESSONS.md
+	@$(SCRIPTS_DIR)/auto-lesson-commit.sh
+
+.PHONY: crontab-install
+crontab-install: ## Install backup automation crontab
+	@echo "Installing crontab entries..."
+	@crontab -l > /tmp/crontab.bak 2>/dev/null || true
+	@grep -q "backup-lessons.sh" /tmp/crontab.bak 2>/dev/null || cat crontab.backup >> /tmp/crontab.bak
+	@crontab /tmp/crontab.bak
+	@echo "✓ Crontab installed"
+	@crontab -l | grep -E "(backup-lessons|lesson-learned)"
+
+.PHONY: crontab-show
+crontab-show: ## Show installed crontab entries
+	@crontab -l | grep -E "(backup-lessons|lesson-learned|project-.*\.tar\.gz)" || echo "No crontab entries found"
+
+.PHONY: docker-volume-create
+docker-volume-create: ## Create Docker volume for .tracking/
+	@docker volume create system-prompts-tracking 2>/dev/null || echo "Volume already exists"
+	@echo "✓ Docker volume created: system-prompts-tracking"
+
+.PHONY: docker-volume-backup
+docker-volume-backup: ## Backup Docker volume to tarball
+	@docker run --rm \
+		-v system-prompts-tracking:/data \
+		-v "$(PWD)/.tracking/backups:/backup" \
+		alpine tar -czf /backup/tracking-volume-$$(date +%Y%m%d).tar.gz -C /data .
+	@echo "✓ Volume backed up to .tracking/backups/"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Docker
 # ═══════════════════════════════════════════════════════════════════════════════

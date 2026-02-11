@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Crontab entries for CodeFoundry backup automation
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Installation:
+#   crontab -l > /tmp/crontab.bak
+#   cat crontab.backup >> /tmp/crontab.bak
+#   crontab /tmp/crontab.bak
+#
+# Format: min hour day month dow command
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Daily backup at 2:00 AM — LESSONS.md and .tracking/
+0 2 * * * cd /Users/s060874gmail.com/coding/projects/system-prompts && ./scripts/backup-lessons.sh >> .tracking/backups/backup.log 2>&1
+
+# Weekly backup on Sunday at 3:00 AM — Full project archive
+0 3 * * 0 cd /Users/s060874gmail.com/coding/projects/system-prompts && tar -czf .tracking/backups/project-$(date +\%Y\%m\%d).tar.gz . --exclude='.git' --exclude='node_modules' --exclude='*.tmp'
+
+# Monthly cleanup on 1st at 4:00 AM — Remove backups older than 90 days
+0 4 1 * * cd /Users/s060874gmail.com/coding/projects/system-prompts && find .tracking/backups/ -name "*.tar.gz" -mtime +90 -delete
+
+# Hourly lesson extraction check (every hour at :15) — Auto-extract if threshold reached
+15 * * * * cd /Users/s060874gmail.com/coding/projects/system-prompts && python3 scripts/lesson-learned-tracker.py extract >> .tracking/extraction.log 2>&1

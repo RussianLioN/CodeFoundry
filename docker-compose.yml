@@ -17,6 +17,7 @@ services:
     volumes:
       - .:/system-prompts
       - /workspace:/workspace
+      - .tracking-data:/system-prompts/.tracking
     environment:
       - SYSTEM_PROMPTS_HOME=/system-prompts
     stdin_open: true
@@ -41,4 +42,5 @@ services:
       - docs
 
 volumes:
+  .tracking-data:
   docs-content:
