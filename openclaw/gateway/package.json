@@ -1,6 +1,6 @@
 {
   "name": "openclaw-gateway",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "OpenClaw Gateway - WebSocket server for AI-first interface",
   "main": "dist/gateway.js",
   "scripts": {
@@ -9,6 +9,11 @@
     "start": "node dist/gateway.js",
     "watch": "tsc --watch",
     "test": "jest",
+    "test:intent": "jest test/intent-classifier.test.ts",
+    "test:gateway": "jest test/gateway.test.ts",
+    "test:all": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts"
   },
   "dependencies": {

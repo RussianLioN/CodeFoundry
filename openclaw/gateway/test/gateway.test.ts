@@ -1,14 +1,16 @@
 /**
- * Gateway v2.0 Unit Tests
+ * Gateway v2.0.1 Unit Tests
  *
  * Tests for:
  * - OllamaClient
+ * - IntentClassifier (NEW v2.0.1)
  * - CommandGenerator
  * - CommandExecutor
  */
 
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { OllamaClient } from '../src/ollama-client';
+import { IntentClassifier } from '../src/intent-classifier';
 import { CommandGenerator } from '../src/command-generator';
 import { CommandExecutor } from '../src/command-executor';
 
@@ -241,5 +243,147 @@ describe('Gateway Integration (mocked)', () => {
     expect(response.status).toBe('error');
     expect(response.error).toHaveProperty('code');
     expect(response.error).toHaveProperty('message');
+  });
+
+  // ============================================================================
+  // Intent Classifier Integration Tests (v2.0.1 - NEW)
+  // ============================================================================
+
+  describe('Intent Classifier Integration', () => {
+    let mockOllama: MockOllamaClient;
+    let classifier: IntentClassifier;
+
+    beforeEach(() => {
+      mockOllama = new MockOllamaClient();
+      classifier = new IntentClassifier({
+        ollamaClient: mockOllama,
+        confidenceThreshold: 0.7,
+      });
+    });
+
+    class MockOllamaClient extends OllamaClient {
+      private mockResponse: string;
+
+      constructor(mockResponse: string) {
+        super({});
+        this.mockResponse = mockResponse;
+      }
+
+      async chat(): Promise<string> {
+        return Promise.resolve(this.mockResponse);
+      }
+    }
+
+    describe('High Confidence Scenarios (>= 0.7)', () => {
+      it('should route create_project to Command Generator', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'create_project',
+          confidence: 0.95,
+          parameters: { name: 'test-app' },
+        }));
+
+        const result = await classifier.classify('Создай приложение');
+
+        expect(result.intent).toBe('create_project');
+        expect(result.confidence).toBe(0.95);
+        expect(result.parameters).toEqual({ name: 'test-app' });
+      });
+
+      it('should route status to Command Generator', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'status',
+          confidence: 0.88,
+          parameters: {},
+        }));
+
+        const result = await classifier.classify('Какой статус?');
+
+        expect(result.intent).toBe('status');
+        expect(result.confidence).toBe(0.88);
+      });
+
+      it('should route help to Command Generator', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'help',
+          confidence: 0.92,
+          parameters: {},
+        }));
+
+        const result = await classifier.classify('Покажи справку');
+
+        expect(result.intent).toBe('help');
+        expect(result.confidence).toBe(0.92);
+      });
+
+      it('should route deploy to Command Generator', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'deploy',
+          confidence: 0.85,
+          parameters: { project_name: 'my-app' },
+        }));
+
+        const result = await classifier.classify('Задеплой my-app');
+
+        expect(result.intent).toBe('deploy');
+        expect(result.confidence).toBe(0.85);
+        expect(result.parameters).toEqual({ project_name: 'my-app' });
+      });
+    });
+
+    describe('Low Confidence Scenarios (< 0.7)', () => {
+      it('should fallback to chat for low confidence', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'create_project',
+          confidence: 0.5, // Below threshold
+          parameters: {},
+        }));
+
+        const result = await classifier.classify('Неясный запрос');
+
+        expect(result.intent).toBe('chat');
+        expect(result.confidence).toBe(1.0); // Overridden
+      });
+    });
+
+    describe('Chat Intent Scenarios', () => {
+      it('should classify casual conversation', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'chat',
+          confidence: 0.91,
+          parameters: {},
+        }));
+
+        const result = await classifier.classify('Привет! Как дела?');
+
+        expect(result.intent).toBe('chat');
+        expect(result.confidence).toBe(0.91);
+      });
+
+      it('should classify gratitude', async () => {
+        mockOllama.setMockResponse(JSON.stringify({
+          intent: 'chat',
+          confidence: 0.93,
+          parameters: {},
+        }));
+
+        const result = await classifier.classify('Спасибо за помощь!');
+
+        expect(result.intent).toBe('chat');
+        expect(result.confidence).toBe(0.93);
+      });
+    });
+
+    describe('Fallback Logic', () => {
+      it('should use keyword matching when AI fails', async () => {
+        // Mock AI failure
+        jest.spyOn(mockOllama, 'chat').mockRejectedValue(new Error('AI unavailable'));
+
+        const result = await classifier.classify('Создай проект');
+
+        // Should fallback to keyword-based classification
+        expect(result.intent).toBe('create_project');
+        expect(result.confidence).toBeGreaterThanOrEqual(0);
+      });
+    });
   });
 });
