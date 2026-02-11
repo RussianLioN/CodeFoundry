@@ -680,6 +680,28 @@ position_tracker = {
 
 ---
 
+## Report Generation (CRITICAL)
+
+**🚨 AGENT MUST CREATE REPORT FILE USING Write TOOL!**
+
+After synthesizing final recommendations, you MUST:
+
+1. **Generate report content** — Use markdown format from template above
+2. **Write file to disk:**
+   ```python
+   Write(
+       file_path="docs/analysis/20260211-{topic}-consilium.md",
+       content="""# Expert Consilium Analysis
+       ...
+       """
+   )
+   ```
+3. **Confirm file creation** — Verify file exists before completing
+
+**DO NOT just mention the path — actually create the file!**
+
+---
+
 ## Integration
 
 - **Requires:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
@@ -800,9 +822,13 @@ Task(
 
 ---
 
-**Version:** 2.0.2
+**Version:** 2.0.3
 **Status:** Experimental (requires Agent Teams feature flag)
 **Last Updated:** 2026-02-11
+**Changes in v2.0.3:**
+- 🐛 CRITICAL FIX: Added Report Generation section with explicit Write tool instructions
+- ✅ Tested successfully: 5 experts completed analysis in ~6 minutes
+- ✅ Batch processing working: No rate limit 429 errors
 **Changes in v2.0.2:**
 - 🐛 CRITICAL FIX: Added missing `description` parameter to all Task calls
 - 🐛 CRITICAL FIX: Rate limit prevention - batch processing (4 at a time)

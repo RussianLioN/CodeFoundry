@@ -77,8 +77,12 @@
 
 | Артефакт | Описание | Дата |
 |----------|----------|------|
-| [OpenClaw Expert Consilium Report](analysis/2026-02-11-openclaw-expert-consilium-report.md) | Анализ OpenClaw v2.0, план реализации, P0/P1/P2 задачи | 2026-02-11 |
-| [Implementation Plan](analysis/2026-02-11-implementation-plan.md) | План реализации рекомендаций Expert Consilium (GitOps, Quality Gates) | 2026-02-11 |
+| [🚀 Quick Start: OpenClaw](QUICKSTART-OPENCLAW.md) | Запуск OpenClaw за 30-60 мин | **СРОЧНО** |
+| [Implementation Plan Variant A](analysis/2026-02-11-implementation-plan-variant-a.md) | План Варианта A с учётом замечаний | 2026-02-11 |
+| [OpenClaw Expert Consilium Report](analysis/2026-02-11-openclaw-expert-consilium-report.md) | Анализ OpenClaw v2.0, план P0/P1/P2 | 2026-02-11 |
+| [Architecture Comparison](analysis/OPENCLAW-ARCHITECTURE-COMPARISON.md) | Сравнение v2.0 vs New | 2026-02-11 |
+| [Claude Code Integration](analysis/2026-02-11-claude-code-integration-proposal.md) | Предложение по интеграции | 2026-02-11 |
+| [Implementation Plan](analysis/2026-02-11-implementation-plan.md) | План рекомендаций Expert Consilium | 2026-02-11 |
 
 ### 🏗️ Architecture
 > Архитектура проекта и анализ систем
@@ -106,6 +110,7 @@
 
 | Документ | Описание | Уровень |
 |----------|----------|--------|
+| [🚀 Quick Start](QUICKSTART-OPENCLAW.md) | **Запуск OpenClaw за 30-60 мин** | ⭐ СРОЧНО |
 | [OpenClaw README](../openclaw/README.md) | Главная документация OpenClaw | Категория |
 | [Установка на VDS](../openclaw/install/VDS-SETUP.md) | Руководство по установке | 3 клика |
 | [Конфигурация](../openclaw/config/README.md) | Настройка OpenClaw | Категория |
@@ -228,8 +233,10 @@
 Последнее обновление: 2026-02-11
 
 Изменения:
-- ✅ **[2026-02-11]** 🔬 **Analysis & Reports** —新增 секция с отчётами Expert Consilium
-- ✅ **[2026-02-11]** OpenClaw Expert Consilium Report — анализ v2.0, план P0/P1/P2
+- ✅ **[2026-02-11]** 🚀 **Quick Start OpenClaw** — запуск за 30-60 мин
+- ✅ **[2026-02-11]** 📋 **Implementation Plan Variant A** — прагматичный подход с учётом замечаний
+- ✅ **[2026-02-11]** 🔬 **Analysis & Reports** — расширенная секция с отчётами
+- ✅ **[2026-02-11]** OpenClaw Expert Consilium Report — анализ v2.0, 75% готовность
 - ✅ **[2026-02-10]** 🆕 **Expert Consilium** — система экспертных дебатов (13 экспертов)
 - ✅ **[2026-02-10]** Добавлен автоматический скрипт setup-github-secrets.sh
 - ✅ **[2026-02-10]** Создана документация scripts/README.md

@@ -1,16 +1,24 @@
 # Command: /expert-consilium-v2
 
-> **Expert Consilium v2.0.2** — Multi-round adversarial debates with Agent Teams (CRITICAL BUGFIX #2)
+> **Expert Consilium v2.0.3** — Multi-round adversarial debates with Agent Teams (PRODUCTION READY)
 
 ## Description
 
 Запускает систему анализа через Agent Teams с межагентскими дебатами. Эксперты группируются по доменам, проводят cross-examination, adversarial debates и red teaming для глубокого анализа проблемы.
 
-## ⚠️ v2.0.2 Critical Fixes (2026-02-11)
+## ✅ v2.0.3 Status: PRODUCTION READY
 
-**Fix #1:** Missing `subagent_type` parameter in Task tool calls
-**Fix #2:** Missing `description` parameter in Task tool calls
-**Fix #3:** Rate limit prevention — batch processing (4 agents at a time)
+**Successfully tested** — 5 экспертов завершили анализ за ~6 минут, NO errors:
+- ✅ InputValidationError исправлен (v2.0.1)
+- ✅ Rate limit 429 исправлен (v2.0.2)
+- ✅ Batch processing работает (4 агента за раз)
+- ✅ Report generation добавлен (v2.0.3)
+
+## ⚠️ Critical Fixes History (2026-02-11)
+
+**Fix #1 (v2.0.1):** Missing `subagent_type` parameter
+**Fix #2 (v2.0.2):** Missing `description` parameter + Rate limit prevention
+**Fix #3 (v2.0.3):** Report generation with explicit Write tool instructions
 
 All Task tool calls now include required parameters:
 - `subagent_type` (e.g., "general-purpose")
