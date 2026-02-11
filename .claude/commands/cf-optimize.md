@@ -29,7 +29,7 @@ Audits all instruction files for token efficiency. Measures consumption, detects
 # Audit single file
 /cf-optimize --file instructions/git-operations.md
 
-# Check token budget compliance
+# Check token guideline compliance
 /cf-optimize --budget
 
 # Natural language
@@ -44,7 +44,7 @@ Audits all instruction files for token efficiency. Measures consumption, detects
 |-----------|------|----------|-------------|
 | `mode` | string | No | audit (default), quick, fix |
 | `--file` / `-f` | string | No | Single file to audit |
-| `--budget` / `-b` | flag | No | Check against token budget |
+| `--budget` / `-b` | flag | No | Check against token guideline |
 | `--top` / `-t` | number | No | Show top N offenders (default: 5) |
 | `--threshold` | number | No | Flag files exceeding N tokens (default: 500) |
 
@@ -71,7 +71,7 @@ Measuring tokens...
 Analyzing...
   ✅ @ref links: 265 valid, 0 broken
   ⚠️ Duplicates: 3 blocks found
-  ⚠️ Loading chain P0: 4,479 tokens (budget: 1,500)
+  ⚠️ Loading chain P0: 4,479 tokens (guideline: 1,500)
   ✅ Keyword density: healthy
 ```
 
@@ -84,13 +84,13 @@ Recommendations:
   TOTAL ESTIMATED SAVINGS: ~6,000 tokens
 ```
 
-## Token Budget Reference
+## Token Guideline Reference
 
 | Priority | Per-File | Per-Chain |
 |----------|----------|-----------|
-| P0 | 400 tokens | 1,500 tokens |
-| P1 | 800 tokens | 3,000 tokens |
-| P2 | 1,500 tokens | 5,000 tokens |
+| P0 | 400-600 tokens | 1,500 tokens |
+| P1 | 800-1200 tokens | 3,000 tokens |
+| P2 | 1,500-2000 tokens | 5,000 tokens |
 
 ## Error Handling
 

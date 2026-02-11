@@ -6,11 +6,12 @@
 
 ## 🔴 P0: Session Start (MANDATORY)
 
-1. **[@ref: TASKS.md](TASKS.md)** ← READ FIRST!
-2. **Git sync** — `git fetch origin && git status`
-3. **[@ref: SESSION.md](SESSION.md)** — current context
+1. **Git sync** — `git fetch origin && git status`
+2. **[@ref: SESSION.md](SESSION.md)** ← READ FIRST! (текущий контекст)
+3. **Саммаризация** — [@ref: instructions/session-summary.md](instructions/session-summary.md) (если новая сессия)
+4. **[@ref: TASKS.md](TASKS.md)** ← THEN read tasks
 
-**🚨 NEVER skip TASKS.md!**
+**🚨 Порядок критичен!** Сначала контекст → потом задачи.
 
 ---
 

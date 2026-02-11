@@ -22,6 +22,10 @@
 
 ### Step 2: Prepare Session Summary
 
+**🚨 Follow [@ref: instructions/session-summary.md](instructions/session-summary.md)**
+
+**For SESSION.md update:**
+
 **For SESSION.md update:**
 
 1. **Accomplishments:** Completed tasks (with IDs), files changed, decisions

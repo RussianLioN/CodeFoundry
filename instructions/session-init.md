@@ -19,7 +19,35 @@
 
 ---
 
-## Step 1: Determine Session Type
+## Step 1: Load Current Context (MANDATORY)
+
+**🚨 ALWAYS read SESSION.md first to understand previous work:**
+
+```
+Load @ref: SESSION.md
+Review: Previous session achievements, current state, next steps
+```
+
+---
+
+## Step 2: Session Summary (for NEW sessions)
+
+**If this is a NEW session (continuation after break):**
+
+```
+Load @ref: instructions/session-summary.md
+Create summary of previous session:
+- What was done?
+- What was achieved?
+- What remains unfinished?
+Update SESSION.md with summary as "Previous Session"
+```
+
+**Why:** Preserves context and enables seamless continuation.
+
+---
+
+## Step 3: Determine Session Type
 
 | TASKS.md | SESSION.md | → Type |
 |----------|-----------|-------|
@@ -30,7 +58,7 @@
 
 ---
 
-## Step 2: Execute Workflow
+## Step 4: Execute Workflow
 
 **FIRST SESSION:** → [@ref: instructions/first-session-workflow.md](instructions/first-session-workflow.md)
 **CONTINUATION:** → [@ref: instructions/continuation-workflow.md](instructions/continuation-workflow.md)
