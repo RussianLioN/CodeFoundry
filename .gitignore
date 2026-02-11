@@ -42,3 +42,8 @@ scripts/backups/
 scripts/conflicts.json
 .env.orchestrator
 .claude/settings.local.json
+
+# Lesson tracking (auto-generated, backed up separately)
+.tracking/
+*.backup.*.json
+.claude/settings.backup.*.json

@@ -196,8 +196,17 @@ test: ## Run all tests (agents + CI + quality gates)
 	@$(MAKE) gate-blocking
 
 .PHONY: lint
-lint: ## Lint code (if any)
-	@echo "No linting defined for meta-generator"
+lint: ## Lint code (shell scripts, python, etc.)
+	@echo "→ Linting shell scripts..."
+	@if command -v shellcheck >/dev/null 2>&1; then \
+		./scripts/fix-shell-syntax.sh; \
+	else \
+		echo "⚠️  shellcheck not found, skipping shell lint"; \
+	fi
+
+.PHONY: shell-check
+shell-check: ## Check shell script syntax with shellcheck
+	@./scripts/fix-shell-syntax.sh
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Documentation
