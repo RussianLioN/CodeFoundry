@@ -21,6 +21,7 @@
 | [sessions-18.md](./sessions-18.md) | #18 | 2026-02-10 |
 | [sessions-19.md](./sessions-19.md) | #19 | 2026-02-10 |
 | [sessions-20.md](./sessions-20.md) | #20 | 2026-02-11 |
+| [session-summary-2026-02-11-s21.md](../session-summary-2026-02-11-s21.md) | **#21** | 2026-02-11 — 2026-02-11 |
 
 ---
 
