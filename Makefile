@@ -339,6 +339,66 @@ gate-all: ## Run all quality gates (blocking + info)
 	@$(SCRIPTS_DIR)/quality-gates.sh --all
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Settings Management (Claude Code)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+.PHONY: settings-validate
+settings-validate: ## Validate Claude Code settings.local.json
+	@python3 scripts/validate-settings.py
+
+.PHONY: settings-sanitize
+settings-sanitize: ## Auto-fix invalid permission patterns in settings.local.json
+	@python3 scripts/sanitize-settings.py --fix
+
+.PHONY: settings-backup
+settings-backup: ## Backup current settings
+	@cp .claude/settings.local.json .claude/settings.backup.$$(date +%Y%m%d-%H%M%S).json
+
+.PHONY: settings-restore
+settings-restore: ## Restore from latest backup (usage: make settings-restore BACKUP=settings.backup.20260211-120000)
+	@if [ -z "$(BACKUP)" ]; then \
+		latest=$$(ls -t .claude/settings.backup.*.json 2>/dev/null | head -1); \
+		if [ -n "$$latest" ]; then \
+			echo "Restoring from $$latest"; \
+			cp "$$latest" .claude/settings.local.json; \
+		else \
+			echo "No backup found"; \
+			exit 1; \
+		fi; \
+	else \
+		cp ".claude/$(BACKUP)" .claude/settings.local.json; \
+	fi
+
+.PHONY: settings-reset
+settings-reset: ## Reset to example settings
+	@cp .claude/settings.example.json .claude/settings.local.json
+	@echo "✓ Settings reset to example"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Lessons Learned System
+# ═══════════════════════════════════════════════════════════════════════════════
+
+.PHONY: lessons-log
+lessons-log: ## Log an error occurrence (usage: make lessons-log TYPE=error_type LOC=file)
+	@if [ -z "$(TYPE)" ] || [ -z "$(LOC)" ]; then \
+		echo "Usage: make lessons-log TYPE=<error_type> LOC=<location>"; \
+		exit 1; \
+	fi
+	@python3 scripts/lesson-learned-tracker.py log --type "$(TYPE)" --location "$(LOC)"
+
+.PHONY: lessons-stats
+lessons-stats: ## Show error statistics and lesson extraction status
+	@python3 scripts/lesson-learned-tracker.py stats
+
+.PHONY: lessons-extract
+lessons-extract: ## Extract lessons from repeated errors (3+ occurrences)
+	@python3 scripts/lesson-learned-tracker.py extract
+
+.PHONY: lessons-show
+lessons-show: ## Show all lessons
+	@cat LESSONS.md
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CI/CD
 # ═══════════════════════════════════════════════════════════════════════════════
 

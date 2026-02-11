@@ -41,3 +41,4 @@ server/.env.test
 scripts/backups/
 scripts/conflicts.json
 .env.orchestrator
+.claude/settings.local.json

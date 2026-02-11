@@ -1,0 +1,28 @@
+{
+  "invalid_json_settings:.claude/settings.local.json": {
+    "type": "invalid_json_settings",
+    "location": ".claude/settings.local.json",
+    "count": 3,
+    "first_seen": "2026-02-11T09:57:33.598294",
+    "last_seen": "2026-02-11T09:57:35.207780",
+    "contexts": [
+      {
+        "timestamp": "2026-02-11T09:57:33.598294",
+        "pattern": "heredoc in permissions",
+        "cause": "auto-grant by Claude Code",
+        "prevention": "use Write tool not heredoc"
+      },
+      {
+        "timestamp": "2026-02-11T09:57:34.403975",
+        "pattern": "heredoc in permissions",
+        "detection": "pre-commit hook"
+      },
+      {
+        "timestamp": "2026-02-11T09:57:35.207780",
+        "pattern": "heredoc in permissions",
+        "solution": "automated sanitization"
+      }
+    ],
+    "lesson_extracted": true
+  }
+}

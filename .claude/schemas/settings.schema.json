@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://codefoundry.dev/schemas/settings.schema.json",
+  "title": "Claude Code Settings",
+  "description": "Schema validation for Claude Code settings.local.json",
+  "type": "object",
+  "properties": {
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Permission pattern for tool execution",
+            "pattern": "^(Bash\\([^)]+\\)|WebFetch\\([^)]+\\)|WebSearch|mcp__[a-z_]+|[a-zA-Z]+:\\*|[a-zA-Z]+\\([^)]+\\)|\\*)$"
+          }
+        },
+        "deny": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["allow"]
+    },
+    "outputStyle": {
+      "type": "string",
+      "enum": ["Concise", "Explanatory", "Balanced"]
+    },
+    "prefersReducedMotion": {
+      "type": "boolean"
+    }
+  },
+  "required": ["permissions"]
+}
