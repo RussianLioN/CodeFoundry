@@ -1,32 +1,32 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# validate-token-budget.sh — Token budget validator for instruction files
-# Part of: token-optimizer agent (P0-003)
+# validate-token-budget.sh — Token guideline validator for instruction files
+# Part of: quality-gates framework (I8 - Token Guideline Advisory)
 # ═══════════════════════════════════════════════════════════════════════════════
 #
 # Usage:
 #   ./scripts/validate-token-budget.sh [--quick|--verbose|--ci]
 #
 # Exit codes:
-#   0 = All budgets OK
-#   1 = Warning (approaching budget)
-#   2 = Fail (budget exceeded)
+#   0 = All guidelines within targets
+#   1 = Warning (approaching advisory targets)
+#   2 = Info (exceeds advisory targets - non-blocking)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 set -euo pipefail
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
-# Per-file token budgets
-P0_FILE_BUDGET=400
-P1_FILE_BUDGET=800
-P2_FILE_BUDGET=1500
+# Per-file token guideline targets (advisory, not blocking)
+P0_FILE_GUIDELINE=400
+P1_FILE_GUIDELINE=800
+P2_FILE_GUIDELINE=1500
 
-# Per-chain token budgets
-P0_CHAIN_BUDGET=1500
-P1_CHAIN_BUDGET=3000
+# Per-chain token guideline targets
+P0_CHAIN_GUIDELINE=1500
+P1_CHAIN_GUIDELINE=3000
 
-# Warning threshold (% of budget)
+# Warning threshold (% of guideline)
 WARN_THRESHOLD=90
 
 # Mode
@@ -76,16 +76,16 @@ check_budget() {
 
     if [ "$tokens" -gt "$budget" ]; then
         local over=$(( tokens - budget ))
-        printf "  ${RED}OVER${NC}  %-45s %5d tokens (budget: %d, +%d over) [%s]\n" \
+        printf "  ${RED}OVER${NC}  %-45s %5d tokens (guideline: %d, +%d over) [%s]\n" \
             "$file" "$tokens" "$budget" "$over" "$priority"
         if [ "$EXIT_CODE" -lt 2 ]; then EXIT_CODE=2; fi
     elif [ "$pct" -ge "$WARN_THRESHOLD" ]; then
-        printf "  ${YELLOW}WARN${NC}  %-45s %5d tokens (budget: %d, %d%% used) [%s]\n" \
+        printf "  ${YELLOW}WARN${NC}  %-45s %5d tokens (guideline: %d, %d%% used) [%s]\n" \
             "$file" "$tokens" "$budget" "$pct" "$priority"
         if [ "$EXIT_CODE" -lt 1 ]; then EXIT_CODE=1; fi
     else
         if [ "$MODE" = "--verbose" ] || [ "$MODE" = "--ci" ]; then
-            printf "  ${GREEN} OK ${NC}  %-45s %5d tokens (budget: %d, %d%% used) [%s]\n" \
+            printf "  ${GREEN} OK ${NC}  %-45s %5d tokens (guideline: %d, %d%% used) [%s]\n" \
                 "$file" "$tokens" "$budget" "$pct" "$priority"
         fi
     fi
@@ -104,13 +104,13 @@ if [ ! -f "CLAUDE.md" ]; then
 fi
 
 echo ""
-echo "${BOLD}TOKEN BUDGET VALIDATION${NC}"
+echo "${BOLD}TOKEN GUIDELINE VALIDATION${NC}"
 echo "═══════════════════════════════════════════════════════════"
 
 # ─── P0 Files (every session) ────────────────────────────────────────────────
 
 echo ""
-echo "${BOLD}P0 Files${NC} (budget: ${P0_FILE_BUDGET} tokens/file)"
+echo "${BOLD}P0 Files${NC} (guideline: ${P0_FILE_GUIDELINE} tokens/file)"
 
 P0_FILES=(
     "CLAUDE.md"
@@ -131,33 +131,33 @@ for file in "${P0_FILES[@]}"; do
                 printf "  ${GREEN} HUB${NC}  %-45s %5d tokens (hub — exempt) [P0]\n" "$file" "$tokens"
             fi
         else
-            check_budget "$file" "$tokens" "$P0_FILE_BUDGET" "P0"
+            check_budget "$file" "$tokens" "$P0_FILE_GUIDELINE" "P0"
         fi
     fi
 done
 
 # P0 chain check
 echo ""
-echo "${BOLD}P0 Chain${NC} (budget: ${P0_CHAIN_BUDGET} tokens)"
-pct=$(( P0_CHAIN_TOTAL * 100 / P0_CHAIN_BUDGET ))
-if [ "$P0_CHAIN_TOTAL" -gt "$P0_CHAIN_BUDGET" ]; then
-    over=$(( P0_CHAIN_TOTAL - P0_CHAIN_BUDGET ))
-    printf "  ${RED}OVER${NC}  P0 session start chain: %d tokens (budget: %d, +%d over)\n" \
-        "$P0_CHAIN_TOTAL" "$P0_CHAIN_BUDGET" "$over"
+echo "${BOLD}P0 Chain${NC} (guideline: ${P0_CHAIN_GUIDELINE} tokens)"
+pct=$(( P0_CHAIN_TOTAL * 100 / P0_CHAIN_GUIDELINE ))
+if [ "$P0_CHAIN_TOTAL" -gt "$P0_CHAIN_GUIDELINE" ]; then
+    over=$(( P0_CHAIN_TOTAL - P0_CHAIN_GUIDELINE ))
+    printf "  ${RED}OVER${NC}  P0 session start chain: %d tokens (guideline: %d, +%d over)\n" \
+        "$P0_CHAIN_TOTAL" "$P0_CHAIN_GUIDELINE" "$over"
     if [ "$EXIT_CODE" -lt 2 ]; then EXIT_CODE=2; fi
 elif [ "$pct" -ge "$WARN_THRESHOLD" ]; then
-    printf "  ${YELLOW}WARN${NC}  P0 session start chain: %d tokens (budget: %d, %d%% used)\n" \
-        "$P0_CHAIN_TOTAL" "$P0_CHAIN_BUDGET" "$pct"
+    printf "  ${YELLOW}WARN${NC}  P0 session start chain: %d tokens (guideline: %d, %d%% used)\n" \
+        "$P0_CHAIN_TOTAL" "$P0_CHAIN_GUIDELINE" "$pct"
     if [ "$EXIT_CODE" -lt 1 ]; then EXIT_CODE=1; fi
 else
-    printf "  ${GREEN} OK ${NC}  P0 session start chain: %d tokens (budget: %d, %d%% used)\n" \
-        "$P0_CHAIN_TOTAL" "$P0_CHAIN_BUDGET" "$pct"
+    printf "  ${GREEN} OK ${NC}  P0 session start chain: %d tokens (guideline: %d, %d%% used)\n" \
+        "$P0_CHAIN_TOTAL" "$P0_CHAIN_GUIDELINE" "$pct"
 fi
 
 # ─── P1 Files (on demand) ────────────────────────────────────────────────────
 
 echo ""
-echo "${BOLD}P1 Files${NC} (budget: ${P1_FILE_BUDGET} tokens/file)"
+echo "${BOLD}P1 Files${NC} (guideline: ${P1_FILE_GUIDELINE} tokens/file)"
 
 P1_CHAIN_TOTAL=0
 P1_COUNT=0
@@ -172,7 +172,7 @@ if [ -d "instructions" ]; then
         tokens=$(estimate_tokens "$file")
         P1_CHAIN_TOTAL=$((P1_CHAIN_TOTAL + tokens))
         P1_COUNT=$((P1_COUNT + 1))
-        check_budget "$file" "$tokens" "$P1_FILE_BUDGET" "P1"
+        check_budget "$file" "$tokens" "$P1_FILE_GUIDELINE" "P1"
     done < <(find ./instructions -name "*.md" -type f -print0 | sort -z)
 fi
 
@@ -186,14 +186,14 @@ fi
 
 if [ "$MODE" = "--verbose" ] || [ "$MODE" = "--ci" ]; then
     echo ""
-    echo "${BOLD}P2 Files${NC} (budget: ${P2_FILE_BUDGET} tokens/file)"
+    echo "${BOLD}P2 Files${NC} (guideline: ${P2_FILE_GUIDELINE} tokens/file)"
 
     P2_TOTAL=0
     if [ -d "docs" ]; then
         while IFS= read -r -d '' file; do
             tokens=$(estimate_tokens "$file")
             P2_TOTAL=$((P2_TOTAL + tokens))
-            check_budget "$file" "$tokens" "$P2_FILE_BUDGET" "P2"
+            check_budget "$file" "$tokens" "$P2_FILE_GUIDELINE" "P2"
         done < <(find ./docs -name "*.md" -type f -print0 | sort -z)
     fi
 fi
@@ -214,9 +214,9 @@ done < <(find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*"
 printf "${BOLD}TOTAL: %d files, ~%d tokens${NC}\n" "$TOTAL_FILES" "$GRAND_TOTAL"
 
 case $EXIT_CODE in
-    0) printf "${GREEN}Result: ALL BUDGETS OK${NC}\n" ;;
-    1) printf "${YELLOW}Result: WARNING — approaching budget limits${NC}\n" ;;
-    2) printf "${RED}Result: FAIL — budget exceeded${NC}\n" ;;
+    0) printf "${GREEN}Result: ALL GUIDELINES OK${NC}\n" ;;
+    1) printf "${YELLOW}Result: WARNING — approaching guideline limits${NC}\n" ;;
+    2) printf "${YELLOW}Result: INFO — guideline exceeded (non-blocking advisory)${NC}\n" ;;
 esac
 
 echo ""

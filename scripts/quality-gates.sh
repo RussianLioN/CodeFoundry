@@ -135,23 +135,7 @@ run_blocking_gates() {
         done
     fi
 
-    # ─── Gate B3: Token Budget Compliance ─────────────────────────────────
-    if [ -f "$SCRIPT_DIR/validate-token-budget.sh" ]; then
-        if "$SCRIPT_DIR/validate-token-budget.sh" --quick >/dev/null 2>&1; then
-            gate_pass "BLOCKING" "Token budget compliance"
-        else
-            local tb_exit=$?
-            if [ "$tb_exit" -eq 2 ]; then
-                gate_fail "BLOCKING" "Token budget compliance" "One or more files exceed budget"
-            else
-                gate_warn "INFO" "Token budget approaching limits"
-            fi
-        fi
-    else
-        gate_warn "INFO" "Token budget script not found (skipped)"
-    fi
-
-    # ─── Gate B4: Python Syntax Check ─────────────────────────────────────
+    # ─── Gate B3: Python Syntax Check ─────────────────────────────────────
     local py_errors=0
     while IFS= read -r -d '' py_file; do
         if ! python3 -c "import py_compile; py_compile.compile('$py_file', doraise=True)" 2>/dev/null; then
@@ -165,7 +149,7 @@ run_blocking_gates() {
         gate_fail "BLOCKING" "Python syntax check" "$py_errors file(s) with syntax errors"
     fi
 
-    # ─── Gate B5: Shell Script Syntax Check ───────────────────────────────
+    # ─── Gate B4: Shell Script Syntax Check ───────────────────────────────
     local sh_errors=0
     while IFS= read -r -d '' sh_file; do
         if ! bash -n "$sh_file" 2>/dev/null; then
@@ -179,7 +163,7 @@ run_blocking_gates() {
         gate_fail "BLOCKING" "Shell script syntax check" "$sh_errors file(s) with syntax errors"
     fi
 
-    # ─── Gate B6: Agent Routing Integrity ─────────────────────────────────
+    # ─── Gate B5: Agent Routing Integrity ─────────────────────────────────
     local phantom_agents=0
     if [ -f ".claude/auto-routing-rules.json" ]; then
         # Extract unique agent names from routing rules
@@ -218,7 +202,7 @@ print('\n'.join(sorted(agents)))
         gate_fail "BLOCKING" "Agent routing integrity" "$phantom_agents phantom agent(s) in routing rules"
     fi
 
-    # ─── Gate B7: Required Files Exist ────────────────────────────────────
+    # ─── Gate B6: Required Files Exist ────────────────────────────────────
     local missing_files=0
     for req_file in CLAUDE.md SESSION.md PROJECT.md TASKS.md Makefile; do
         if [ ! -f "$req_file" ]; then
@@ -232,7 +216,7 @@ print('\n'.join(sorted(agents)))
         gate_fail "BLOCKING" "Required project files exist" "$missing_files required file(s) missing"
     fi
 
-    # ─── Gate B8: Settings Validation ───────────────────────────────────────
+    # ─── Gate B7: Settings Validation ───────────────────────────────────────
     if [ -f ".claude/settings.local.json" ]; then
         if python3 "$SCRIPT_DIR/validate-settings.py" >/dev/null 2>&1; then
             gate_pass "BLOCKING" "Settings validation"
@@ -379,7 +363,23 @@ run_info_gates() {
         gate_warn "INFO" "Document integration" "$detail"
     fi
 
-    # ─── Gate I8: Lesson Extraction (non-blocking) ────────────────────────
+    # ─── Gate I8: Token Guideline Advisory ───────────────────────────────────
+    if [ -f "$SCRIPT_DIR/validate-token-budget.sh" ]; then
+        if "$SCRIPT_DIR/validate-token-budget.sh" --quick >/dev/null 2>&1; then
+            gate_pass "INFO" "Token guideline compliance (within advisory targets)"
+        else
+            local tb_exit=$?
+            if [ "$tb_exit" -eq 2 ]; then
+                gate_warn "INFO" "Token guideline exceeded" "One or more files exceed advisory targets (consider @ref extraction)"
+            else
+                gate_warn "INFO" "Token guideline approaching limits" "Files approaching advisory targets"
+            fi
+        fi
+    else
+        gate_warn "INFO" "Token guideline script not found" "Run: make install-scripts"
+    fi
+
+    # ─── Gate I9: Lesson Extraction (non-blocking) ────────────────────────
     if [ -f "scripts/lesson-learned-tracker.py" ]; then
         local lesson_output
         lesson_output=$(python3 scripts/lesson-learned-tracker.py extract 2>&1 || true)
