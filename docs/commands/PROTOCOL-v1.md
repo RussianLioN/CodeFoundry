@@ -1,4 +1,4 @@
-# Command Protocol v1.0
+# Command Protocol v1.1 (с Subagent Protocol v2.0 Preview)
 
 > **OpenClaw Orchestrator ↔ Claude Code CLI Bridge**
 >
@@ -34,9 +34,10 @@ Command Protocol — это JSON-протокол связи между OpenClaw
 
 ```json
 {
-  "version": "1.0",
+  "version": "1.1",
   "id": "uuid-v4",
   "timestamp": "2025-02-05T12:00:00Z",
+  "intent_confidence": 0.95,
   "command": "command_name",
   "params": {
     "key": "value"
@@ -53,12 +54,18 @@ Command Protocol — это JSON-протокол связи между OpenClaw
 
 | Поле | Тип | Обязательное | Описание |
 |------|-----|--------------|----------|
-| `version` | string | ✅ Да | Версия протокола (всегда "1.0") |
+| `version` | string | ✅ Да | Версия протокола ("1.0" или "1.1") |
 | `id` | string | ✅ Да | Уникальный ID команды (UUID v4) |
 | `timestamp` | string | ✅ Да | ISO 8601 timestamp |
+| `intent_confidence` | number | ❌ Нет | Уверенность AI в классификации intent (0.0-1.0) — **NEW v1.1** |
 | `command` | string | ✅ Да | Имя команды |
 | `params` | object | ✅ Да | Параметры команды |
 | `context` | object | ❌ Нет | Контекст выполнения |
+
+**Обновление v1.1 (2026-02-11):**
+- Добавлено поле `intent_confidence` для логирования уверенности классификации intent
+- Используется для мониторинга качества Intent Classifier
+- Примеры: 0.95 (высокая), 0.75 (средняя), 0.45 (низкая)
 
 ---
 
@@ -395,6 +402,175 @@ curl -X POST http://gateway:18789/command \
 - 🔄 HTTP API
 - 🔄 WebSocket streaming
 - 🔄 Multi-user support
+
+---
+
+## 🤖 Subagent Communication Protocol v2.0 (Preview)
+
+> **Статус:** PREVIEW / ROADMAP (Phase 16)
+> **Источник:** Expert Consilium v2.0 + subagent-architect
+> **Назначение:** Протокол связи между субагентами в гибридной архитектуре
+
+### Обзор
+
+Subagent Communication Protocol — это расширение Command Protocol для межагентского взаимодействия в гибридной архитектуре (Phase 2).
+
+```
+┌──────────────┐      Task Request        ┌──────────────┐
+│   Main       │ ──────────────────────▶│   Subagent   │
+│  Orchestrator│                         │  (Domain)    │
+└──────────────┘      Agent Handoff        └──────────────┘
+     ▲                                        │
+     └────────────────────────────────────────────────┘
+          Result / Follow-up Task
+```
+
+### Формат Запроса (Task Assignment)
+
+```json
+{
+  "version": "2.0",
+  "timestamp": "2026-02-11T12:00:00Z",
+  "request_id": "req-abc123",
+  "task": {
+    "type": "code_generation|debugging|testing|deployment|documentation",
+    "description": "Generate CRUD API for User model",
+    "parameters": {
+      "model": "User",
+      "endpoints": ["create", "read", "update", "delete"],
+      "framework": "fastapi"
+    },
+    "constraints": {
+      "max_files": 10,
+      "timeout_ms": 30000,
+      "test_coverage": 0.8
+    }
+  },
+  "context": {
+    "cwd": "/workspace/my-project",
+    "git_branch": "feature/users-api",
+    "previous_results": {
+      "code_generator": "generated initial structure",
+      "test_generator": "tests pending"
+    }
+  },
+  "handoff": {
+    "from_agent": "orchestrator",
+    "reason": "domain-specific expertise required"
+  }
+}
+```
+
+### Поля Task Request
+
+| Поле | Тип | Обязательное | Описание |
+|------|-----|--------------|----------|
+| `version` | string | ✅ Да | Версия протокола ("2.0") |
+| `timestamp` | string | ✅ Да | ISO 8601 timestamp |
+| `request_id` | string | ✅ Да | Уникальный ID запроса |
+| `task` | object | ✅ Да | Описание задачи |
+| `task.type` | string | ✅ Да | Тип задачи |
+| `task.description` | string | ✅ Да | Человеческое описание |
+| `task.parameters` | object | ❌ Нет | Параметры задачи |
+| `task.constraints` | object | ❌ Нет | Ограничения (timeout, max_files, etc.) |
+| `context` | object | ✅ Да | Контекст выполнения |
+| `handoff` | object | ❌ Нет | Информация о передаче между агентами |
+
+### Формат Ответа (Agent Result)
+
+```json
+{
+  "version": "2.0",
+  "request_id": "req-abc123",
+  "timestamp": "2026-02-11T12:05:00Z",
+  "status": "success|partial|error|followup_required",
+  "result": {
+    "data": "agent-specific",
+    "files_created": ["src/models/user.py", "src/api/routes/users.py"],
+    "artifacts": ["tests/test_users.py"]
+  },
+  "metrics": {
+    "duration_ms": 4523,
+    "tokens_used": 1234,
+    "confidence": 0.92
+  },
+  "handoff": {
+    "to_agent": "test_generator",
+    "reason": "code generated, testing required"
+  },
+  "message": "✅ Generated CRUD API with 5 endpoints"
+}
+```
+
+### Agent Handoff Format
+
+При передаче задачи между агентами используется стандартизированный формат:
+
+```markdown
+## Agent Handoff
+
+**From:** {source_agent}
+**To:** {target_agent}
+**Reason:** {handoff_reason}
+**Timestamp:** {ISO_8601}
+
+---
+
+### Context
+
+{summary_of_work_done}
+
+### Files Involved
+
+- {file_1_path} (action: created|modified|analyzed)
+- {file_2_path} (action: created|modified|analyzed)
+
+### Task
+
+{task_description_for_next_agent}
+
+### Constraints
+
+- {constraint_1}
+- {constraint_2}
+
+---
+
+**Continue from here.**
+```
+
+### Поддерживаемые Типы Задач
+
+| Тип | Описание | Примеры |
+|------|-----------|----------|
+| `code_generation` | Генерация кода | CRUD API, CLI tool, React component |
+| `debugging` | Отладка и исправление ошибок | Fix failing tests, resolve runtime errors |
+| `testing` | Генерация и запуск тестов | Unit tests, integration tests, E2E tests |
+| `deployment` | Деплой приложений | Docker Compose, Kubernetes, CI/CD |
+| `documentation` | Генерация документации | API docs, README, inline comments |
+| `refactoring` | Рефакторинг кода | Extract methods, improve structure |
+| `optimization` | Оптимизация производительности | Database queries, caching, async operations |
+
+### Примеры Workflow
+
+**Пример 1: Sequential Handoff**
+```
+Orchestrator → Code Generator → Test Generator → Code Reviewer
+     │              │                │               │
+     │              └────────────────┘               │
+     │                  (tests generated)            │
+     └───────────────────────────────────────────────┘
+                  (review complete)
+```
+
+**Пример 2: Parallel Execution**
+```
+Orchestrator
+     │
+     ├── Code Generator ────┐
+     │                     ├──→ Result Aggregator
+     └── Doc Generator ─────┘
+```
 
 ---
 

@@ -451,6 +451,7 @@ class OpenClawGateway {
         {
           user_id: session.userId,
           session_id: session.id,
+          intent_confidence: intentResult.confidence, // v2.0.1: Pass Intent Classifier confidence
         }
       );
 

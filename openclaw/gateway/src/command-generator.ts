@@ -1,10 +1,16 @@
 /**
  * Command Generator - AI-Powered NLP to Command Protocol
  *
- * Converts natural language requests to Command Protocol v1.0 JSON format.
- * Uses Ollama Cloud API with gemini-3-flash-preview for intent parsing.
+ * Converts natural language requests to Command Protocol v1.1 JSON format.
+ * v2.0.1 UPDATE: Now integrates with Intent Classifier for better accuracy.
+ *
+ * Workflow:
+ * 1. Intent Classifier classifies user message → intent + confidence
+ * 2. Command Generator extracts parameters and generates Command Protocol
+ * 3. CLI Bridge executes command via Claude Code
  *
  * @see docs/commands/PROTOCOL-v1.md
+ * @see docs/OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +24,7 @@ export interface CommandRequest {
   version: string;
   id: string;
   timestamp: string;
+  intent_confidence?: number; // v2.0.1: AI intent classification confidence
   command: string;
   params: Record<string, any>;
   context: {
@@ -98,12 +105,17 @@ export class CommandGenerator {
 
   /**
    * Generate command from natural language
+   * v2.0.1 UPDATE: Now accepts pre-classified intent from Intent Classifier
    */
   async generateCommand(
     userInput: string,
-    context?: { user_id?: string; session_id?: string }
+    context?: { user_id?: string; session_id?: string; intent_confidence?: number }
   ): Promise<CommandRequest> {
-    const intent = await this.parseIntent(userInput);
+    // v2.0.1: If intent_confidence is provided, Intent Classifier already did classification
+    // Otherwise, fall back to internal parsing (for backward compatibility)
+    const intent = context?.intent_confidence
+      ? await this.generateFromPreClassified(userInput, context.intent_confidence)
+      : await this.parseIntent(userInput);
 
     // Handle ambiguity
     if (intent.status === 'ambiguity') {
@@ -122,9 +134,10 @@ export class CommandGenerator {
 
     // Build Command Protocol request
     const commandRequest: CommandRequest = {
-      version: '1.0',
+      version: '1.1',
       id: uuidv4(),
       timestamp: new Date().toISOString(),
+      intent_confidence: context?.intent_confidence || intent.confidence,
       command: intent.command,
       params: intent.parameters,
       context: {
@@ -134,6 +147,40 @@ export class CommandGenerator {
     };
 
     return commandRequest;
+  }
+
+  /**
+   * Generate command from pre-classified intent (v2.0.1 - NEW)
+   * Used when Intent Classifier has already determined the intent
+   */
+  private async generateFromPreClassified(
+    userInput: string,
+    confidence: number
+  ): Promise<ParsedIntent> {
+    // Skip full AI parsing if confidence is high enough
+    // Just extract parameters and validate
+    const messages: OllamaMessage[] = [
+      { role: 'system', content: this.systemPrompt },
+      { role: 'user', content: `Extract parameters from: "${userInput}"` },
+    ];
+
+    try {
+      const response = await this.ollama.chat(messages, {
+        temperature: this.temperature,
+      });
+
+      const parsed = JSON.parse(response.trim()) as ParsedIntent;
+
+      // Update confidence with Intent Classifier's value
+      parsed.confidence = confidence;
+
+      return parsed;
+    } catch (error) {
+      console.error('[COMMAND-GEN] Pre-classified parsing failed:', error);
+
+      // Fallback to rule-based parsing
+      return this.fallbackParse(userInput);
+    }
   }
 
   /**
