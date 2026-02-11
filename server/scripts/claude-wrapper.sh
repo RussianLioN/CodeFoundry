@@ -228,8 +228,55 @@ exec_help() {
     log_info "Showing help"
 
     success_response "$id" \
-        '{"commands": [{"name": "/new", "description": "Создать новый проект", "usage": "/new <project-name> [archetype]", "example": "/new my-app web-service"}, {"name": "/status", "description": "Статус системы", "usage": "/status", "example": "/status"}, {"name": "/help", "description": "Показать справку", "usage": "/help", "example": "/help"}]}' \
-        "📖 Доступные команды:\n\n/new <name> — Создать проект\n/status — Статус системы\n/help — Справка"
+        '{"commands": [{"name": "/new", "description": "Создать новый проект", "usage": "/new <project-name> [archetype]", "example": "/new my-app web-service"}, {"name": "/status", "description": "Статус системы", "usage": "/status", "example": "/status"}, {"name": "/deploy", "description": "Задеплоить проект", "usage": "/deploy <project-name>", "example": "/deploy my-app"}, {"name": "/help", "description": "Показать справку", "usage": "/help", "example": "/help"}]}' \
+        "📖 Доступные команды:\n\n/new <name> — Создать проект\n/status — Статус системы\n/deploy <name> — Деплой проекта\n/help — Справка"
+}
+
+# Command: deploy
+exec_deploy() {
+    local id="$1"
+    local params="$2"
+
+    local project_name
+    project_name=$(echo "$params" | jq -r '.project_name // .name // empty')
+
+    # Validation
+    if [[ -z "$project_name" ]]; then
+        error_response "$id" "INVALID_PARAMS" "Project name is required for deploy"
+        return 1
+    fi
+
+    local project_path="$WORKSPACE_DIR/$project_name"
+
+    # Check if project exists
+    if [[ ! -d "$project_path" ]]; then
+        error_response "$id" "PROJECT_NOT_FOUND" "Project not found: $project_name"
+        return 1
+    fi
+
+    log_info "Deploying project: $project_name"
+
+    # Check if Docker is available
+    if ! command -v docker &>/dev/null; then
+        error_response "$id" "DOCKER_ERROR" "Docker is not available"
+        return 1
+    fi
+
+    # Build and start containers
+    local output
+    local exit_code
+
+    output=$(cd "$project_path" && docker-compose up -d --build 2>&1) || exit_code=$?
+
+    if [[ ${exit_code:-0} -ne 0 ]]; then
+        log_error "Deploy failed: $output"
+        error_response "$id" "DEPLOY_ERROR" "Failed to deploy: $(echo "$output" | head -1)"
+        return 1
+    fi
+
+    success_response "$id" \
+        "{\"project_name\": \"$project_name\", \"project_path\": \"$project_path\", \"deployed_at\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}" \
+        "🚀 Проект $project_name задеплоен!\n📁 Path: $project_path"
 }
 
 # ================================================================
@@ -258,6 +305,13 @@ main() {
     command_name=$(echo "$command_json" | jq -r '.command')
     command_params=$(echo "$command_json" | jq -c '.params // {}')
 
+    # Log intent confidence if provided (v2.0.1 - Intent Classifier integration)
+    local intent_confidence
+    intent_confidence=$(echo "$command_json" | jq -r '.intent_confidence // empty')
+    if [[ -n "$intent_confidence" ]]; then
+        log_info "Intent confidence: $intent_confidence"
+    fi
+
     log_info "Executing command: $command_name (id: $command_id)"
 
     # Route to appropriate executor
@@ -267,6 +321,9 @@ main() {
             ;;
         status)
             exec_status "$command_id"
+            ;;
+        deploy)
+            exec_deploy "$command_id" "$command_params"
             ;;
         help)
             exec_help "$command_id"

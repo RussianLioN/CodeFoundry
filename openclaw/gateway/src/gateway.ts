@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { OllamaClient, createOllamaClient } from './ollama-client';
 import { CommandGenerator, createCommandGenerator, AmbiguityError } from './command-generator';
 import { CommandExecutor, createCommandExecutor } from './command-executor';
+import { IntentClassifier, createIntentClassifier } from './intent-classifier';
 
 // Configuration
 const GATEWAY_PORT = parseInt(process.env.GATEWAY_PORT || '18789');
@@ -106,14 +107,17 @@ class OpenClawGateway {
   private ollama: OllamaClient;
   private commandGenerator: CommandGenerator;
   private commandExecutor: CommandExecutor;
+  private intentClassifier: IntentClassifier;
 
   constructor(config: {
     port?: number;
     host?: string;
+    healthPort?: number;
     workspace?: string;
     ollamaClient?: OllamaClient;
     commandGenerator?: CommandGenerator;
     commandExecutor?: CommandExecutor;
+    intentClassifier?: IntentClassifier;
   }) {
     // Configuration
     const port = config.port || GATEWAY_PORT;
@@ -129,6 +133,9 @@ class OpenClawGateway {
     });
     this.commandExecutor = config.commandExecutor || createCommandExecutor({
       workspace: this.workspace,
+    });
+    this.intentClassifier = config.intentClassifier || createIntentClassifier({
+      ollamaClient: this.ollama,
     });
 
     // Initialize sessions storage
@@ -368,46 +375,67 @@ class OpenClawGateway {
     }
 
     // ============================================================
-    // INTENT PRE-CLASSIFIER (Performance Optimization)
-    // Skip command generation for non-command messages
-    // This prevents double AI calls for free-form chat
+    // AI-POWERED INTENT CLASSIFIER (v2.0.1 - ORCH-007.5 FIX)
+    // Classifies user intent using AI instead of keyword matching
+    // This restores AI-first architecture while maintaining performance
     // ============================================================
 
-    const COMMAND_KEYWORDS = [
-      'create', 'new', 'созда', 'новый', 'проект', 'project',
-      'status', 'статус', 'состояни',
-      'deploy', 'деплой', 'запуск',
-      'build', 'собери', 'сборк',
-      'test', 'тест', 'провер',
-      '/help', '/status', '/new', '/deploy'
-    ];
+    console.log(`[GATEWAY] Classifying intent for message: "${content.substring(0, 50)}..."`);
 
-    const hasCommandIntent = COMMAND_KEYWORDS.some(keyword =>
-      lowerContent.includes(keyword)
-    );
+    const intentResult = await this.intentClassifier.classify(content);
+    console.log(`[GATEWAY] Intent: ${intentResult.intent} (confidence: ${intentResult.confidence})`);
 
-    // If no command intent detected, go directly to free-form chat
-    // This skips the expensive command generation step
-    if (!hasCommandIntent) {
-      console.log('[INTENT] No command keywords detected, using free-form chat directly');
+    // Route based on classified intent
+    switch (intentResult.intent) {
+      case 'chat':
+        console.log('[GATEWAY] Chat intent detected, using free-form conversation');
 
-      // Build chat messages with history context
-      const chatMessages = [
-        { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian. Be concise and friendly.' },
-        ...session.messages.slice(-5).map(m => ({
-          role: 'user',
-          content: m.content
-        })),
-        { role: 'user', content }
-      ];
+        // Build chat messages with history context
+        const chatMessages = [
+          { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian. Be concise and friendly.' },
+          ...session.messages.slice(-5).map(m => ({
+            role: 'user',
+            content: m.content
+          })),
+          { role: 'user', content }
+        ];
 
-      const response = await this.ollama.chat(chatMessages);
+        const response = await this.ollama.chat(chatMessages);
 
-      return {
-        type: 'complete',
-        sessionId: responseSessionId,
-        content: response || 'Извините, не удалось сгенерировать ответ.'
-      };
+        return {
+          type: 'complete',
+          sessionId: responseSessionId,
+          content: response || 'Извините, не удалось сгенерировать ответ.'
+        };
+
+      case 'help':
+        return {
+          type: 'complete',
+          sessionId: responseSessionId,
+          content: this.getHelpText(),
+        };
+
+      case 'status':
+      case 'deploy':
+      case 'create_project':
+        // These intents require command generation (continue below)
+        console.log(`[GATEWAY] Command intent: ${intentResult.intent}, proceeding to command generation`);
+        break;
+
+      default:
+        console.warn(`[GATEWAY] Unknown intent: ${intentResult.intent}, treating as chat`);
+        // Fallback to chat
+        const fallbackMessages = [
+          { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian. Be concise and friendly.' },
+          { role: 'user', content }
+        ];
+        const fallbackResponse = await this.ollama.chat(fallbackMessages);
+
+        return {
+          type: 'complete',
+          sessionId: responseSessionId,
+          content: fallbackResponse || 'Извините, не удалось сгенерировать ответ.'
+        };
     }
 
     try {

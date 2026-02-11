@@ -73,17 +73,23 @@
 - **Приоритет:** ВЫСОКИЙ (P1)
 - **Команды:** /new, /status, /help
 
-### ORCH-007.5: 🔴 CRITICAL BUG - Intent Pre-Classifier Breaks OpenClaw Architecture 🔴
-- **Статус:** 🔴 БЛОКИРУЕТСЯ - СРОЧНО
-- **Приоритет:** 🔴 КРИТИЧЕСКИЙ (P0)
+### ORCH-007.5: AI Intent Classifier Implementation ✅
+- **Статус:** ВЫПОЛНЕНО (Session #21, 2026-02-11)
+- **Приоритет:** 🔴 КРИТИЧЕСКИЙ (P0) — РЕШЕНО
 - **Проблема:** Intent Pre-Classifier (commit `1d4a1aa`) обходит OpenClaw для свободных сообщений
-- **Ожидаемое поведение:** OpenClaw должен использовать AI для распознавания intent из свободного текста
-- **Фактическое поведение:** Сообщения без keywords идут в free-form chat, минуя command generation
-- **Влияние:** OpenClaw превратился в простой чат-бот, а не оркестратор команд
-- **Решение:** Вариант D — AI Intent Classifier (см. [@ref: Expert Consilium Report](docs/analysis/2026-02-11-openclaw-expert-consilium-report.md))
-- **Заметки:** Command Generator должен уметь обрабатывать "Создай проект X", "Какой статус?", "Хочу новый проект" и т.д.
-- **Анализ:** [@ref: OpenClaw Expert Consilium Report](docs/analysis/2026-02-11-openclaw-expert-consilium-report.md) — 75% готовность, план P0/P1/P2
-- **Заблокировано:** ORCH-009 (Testing), ORCH-010 (Deployment)
+- **Решение:** Вариант D — AI Intent Classifier
+- **Файлы:**
+  - ✅ `openclaw/gateway/src/intent-classifier.ts` (новый модуль, 280+ строк)
+  - ✅ `openclaw/gateway/src/gateway.ts` (интеграция Intent Classifier)
+  - ✅ `server/scripts/claude-wrapper.sh` (обновлён: команда `deploy`, логирование confidence)
+- **Функциональность:**
+  - AI-powered классификация intent (gemini-3-flash-preview)
+  - Confidence scoring с threshold (0.7 по умолчанию)
+  - Extraction параметров из естественного языка
+  - Fallback на keyword matching при ошибках AI
+- **Intents:** create_project, status, help, deploy, chat
+- **Тесты:** Требуется unit + integration тестирование (ORCH-009)
+- **Завершено:** 2026-02-11
 
 ### ORCH-008: Docker Compose Update ✅
 - **Статус:** ВЫПОЛНЕНО
@@ -292,6 +298,86 @@
 - **Статус:** ЗАПЛАНИРОВАНО
 - **Приоритет:** НОРМАЛЬНЫЙ
 - **Файлы:** `SESSION.md`, `CHANGELOG.md`
+
+---
+
+## 🔀 Фаза 16: Subagent Framework Integration (BACKLOG)
+
+> **Источник:** Expert Consilium v2.0 + architect-comparative + subagent-architect
+> **Стратегия:** Гибридный подход — v2.0 для production + подготовка инфраструктуры для субагентов
+> **План:** [@ref: docs/plans/2026-02-11-FINAL-artifact-migration-plan.md](docs/plans/2026-02-11-FINAL-artifact-migration-plan.md)
+
+### SUB-001: Subagent Framework Core ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** ВЫСОКИЙ (P0)
+- **Файлы:**
+  - `openclaw/subagent-framework/core/agent-registry.ts`
+  - `openclaw/subagent-framework/core/agent-lifecycle-manager.ts`
+- **Компоненты:**
+  - Agent Registry (AGENTS-INDEX.json)
+  - Agent Router (Intent → Subagent)
+  - Agent Lifecycle Manager
+
+### SUB-002: Core Subagents (MVP) ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** ВЫСОКИЙ (P0)
+- **Субагенты:**
+  - Intent Parser (agents/core/intent-parser.md)
+  - Command Resolver (agents/core/command-resolver.md)
+  - Command Executor (agents/core/command-executor.md)
+  - Agent Router (agents/core/agent-router.md)
+- **Файлы:** `/opt/openclaw/workspace/agents/core/*.md`
+
+### SUB-003: Development Subagents ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** СРЕДНИЙ (P1)
+- **Субагенты:**
+  - Code Generator (agents/development/code-generator.md)
+  - Debugger (agents/development/debugger.md)
+  - Test Generator (agents/development/test-generator.md)
+- **Файлы:** `/opt/openclaw/workspace/agents/development/*.md`
+
+### SUB-004: AGENTS-INDEX.json ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** ВЫСОКИЙ (P0)
+- **Файл:** `/opt/openclaw/workspace/AGENTS-INDEX.json`
+- **Формат:** Machine-readable registry всех агентов с capabilities, triggers, models
+
+### SUB-005: AGENTS.md Registry ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** ВЫСОКИЙ (P0)
+- **Файл:** `/opt/openclaw/workspace/AGENTS.md`
+- **Формат:** Human-readable registry всех агентов
+
+### SUB-006: AGENTS-SCHEMA.json ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** СРЕДНИЙ (P1)
+- **Файл:** `/opt/openclaw/workspace/AGENTS-SCHEMA.json`
+- **Формат:** JSON Schema validation для AGENTS-INDEX.json
+
+### SUB-007: Hybrid Routing Logic ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** КРИТИЧЕСКИЙ (P0)
+- **Логика:**
+  - Simple tasks → OpenClaw v2.0 (gemini-3-flash)
+  - Complex tasks → Claude Code (glm-4.7)
+  - Specialized → Subagents (domain-specific)
+- **Файл:** `openclaw/subagent-framework/core/hybrid-router.ts`
+
+### SUB-008: Agent Handoff Protocol ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** СРЕДНИЙ (P1)
+- **Формат:** Стандартизированный формат передачи контекста между агентами
+- **Пример:** Agent Handoff Format (markdown template)
+
+### SUB-009: Self-Improving Loop ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** НИЗКИЙ (P2)
+- **Компоненты:**
+  - Gap Detection Logic
+  - Agent Generation Workflow
+  - Validation Framework
+- **Цель:** Автоматическое создание агентов для обнаруженных gaps
 
 ---
 
