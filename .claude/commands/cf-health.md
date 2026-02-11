@@ -26,7 +26,7 @@ Check all `@ref:` links in instruction files resolve to existing files.
 2. Report broken links with file:target pairs
 
 ### --tokens (Token Budget Compliance)
-Check all instruction files against P0/P1/P2 token budgets.
+Check all instruction files against P0/P1/P2 token guidelines.
 
 **Steps:**
 1. Run `scripts/validate-token-budget.sh --verbose`
