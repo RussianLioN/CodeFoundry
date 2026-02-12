@@ -326,7 +326,9 @@ services:
       - PROJECT_NAME=${PROJECT_NAME:-system-prompts}
       - PROJECT_DIR=/workspace
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      # Telegram-bot is a WebSocket client, not an HTTP server
+      # Check if the bot process is running instead of HTTP endpoint
+      test: ["CMD", "sh", "-c", "pgrep -f 'node dist/bot.js' > /dev/null"]
       interval: 30s
       timeout: 10s
       retries: 3
