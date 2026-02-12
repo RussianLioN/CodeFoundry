@@ -47,12 +47,20 @@ async function sendSafeMessage(
 ): Promise<void> {
   const htmlText = markdownToHtml(text);
 
+  logger.info(`[SEND_SAFE] Original text length: ${text.length}`);
+  logger.info(`[SEND_SAFE] HTML text preview: ${htmlText.substring(0, 100)}...`);
+
   try {
-    await bot.sendMessage(chatId, htmlText, { parse_mode: 'HTML' });
-  } catch (error) {
+    const result = await bot.sendMessage(chatId, htmlText, { parse_mode: 'HTML' });
+    logger.info(`[SEND_SAFE] Message sent successfully with HTML parse mode`);
+  } catch (error: any) {
+    // Log full error details
+    logger.error(`[SEND_SAFE] HTML parse failed!`);
+    logger.error(`[SEND_SAFE] Error code: ${error?.response?.body?.error_code}`);
+    logger.error(`[SEND_SAFE] Error description: ${error?.response?.body?.description}`);
+    logger.error(`[SEND_SAFE] Original text that failed: ${text.substring(0, 200)}`);
+
     // Fallback to plain text if HTML parsing fails
-    logger.warn('HTML parse failed, sending as plain text:', error);
-    // Remove HTML tags for plain text
     const plainText = text
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/\*(.+?)\*/g, '$1')
@@ -61,7 +69,15 @@ async function sendSafeMessage(
       .replace(/`(.+?)`/g, '$1')
       .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, ''))
       .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)');
-    await bot.sendMessage(chatId, plainText);
+
+    logger.info(`[SEND_SAFE] Retrying with plain text...`);
+    try {
+      await bot.sendMessage(chatId, plainText);
+      logger.info(`[SEND_SAFE] Plain text fallback succeeded`);
+    } catch (fallbackError: any) {
+      logger.error(`[SEND_SAFE] Plain text fallback also failed!`);
+      logger.error(`[SEND_SAFE] Fallback error: ${fallbackError?.response?.body?.description}`);
+    }
   }
 }
 
