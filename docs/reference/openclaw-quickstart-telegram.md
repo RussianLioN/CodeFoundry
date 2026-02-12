@@ -1,8 +1,19 @@
 # 🚀 OpenClaw: Быстрый Старт через Telegram
 
+> [🏠 Главная](../../README.md) → [📋 Docs](../INDEX.md) → [📚 Reference](INDEX.md) → **OpenClaw Quickstart**
+
 > **Бот:** @codefoundrybot
 > **Сервер:** ainetic.tech
 > **Дата:** 2026-02-12
+
+---
+
+## 🔗 Связанные документы
+
+| Документ | Описание |
+|----------|----------|
+| [Complete Guide](openclaw-complete-guide-2026.md) | Полное руководство (25 Tools + 53 Skills) |
+| [Architecture](OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md) | Архитектура OpenClaw v2.0.1 |
 
 ---
 

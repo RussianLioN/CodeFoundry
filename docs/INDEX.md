@@ -185,6 +185,8 @@
 
 | Артефакт | Описание | Статус |
 |----------|----------|--------|
+| [📚 OpenClaw Complete Guide 2026](reference/openclaw-complete-guide-2026.md) | Полное руководство (25 Tools + 53 Skills) | 🆕 |
+| [🚀 OpenClaw Quickstart](reference/openclaw-quickstart-telegram.md) | Быстрый старт через Telegram | 🆕 |
 | [Agent Teams Integration Plan](reference/agent-teams-integration-plan.md) | План интеграции Agent Teams | Phase 15 |
 | [OpenClaw + Ollama + Gemini System](reference/openclaw-ollama-gemini-telegram-system.md) | Технический справка | ✅ |
 
@@ -230,9 +232,12 @@
 
 ## 🔄 История Изменений
 
-Последнее обновление: 2026-02-11
+Последнее обновление: 2026-02-12
 
 Изменения:
+- ✅ **[2026-02-12]** 📚 **OpenClaw Complete Guide 2026** — 25 Tools + 53 Skills
+- ✅ **[2026-02-12]** 🚀 **OpenClaw Quickstart** — быстрый старт через Telegram
+- ✅ **[2026-02-12]** Добавлены хлебные крошки и кросс-ссылки
 - ✅ **[2026-02-11]** 🚀 **Quick Start OpenClaw** — запуск за 30-60 мин
 - ✅ **[2026-02-11]** 📋 **Implementation Plan Variant A** — прагматичный подход с учётом замечаний
 - ✅ **[2026-02-11]** 🔬 **Analysis & Reports** — расширенная секция с отчётами

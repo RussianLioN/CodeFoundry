@@ -1,8 +1,20 @@
 # 📚 OpenClaw: Полное Руководство 2026
 
+> [🏠 Главная](../../README.md) → [📋 Docs](../INDEX.md) → [📚 Reference](INDEX.md) → **OpenClaw Guide**
+
 > **Дата обновления:** 2026-02-12
 > **Источники:** Официальная документация, сообщество, GitHub
 > **Версия OpenClaw:** 2.0+
+
+---
+
+## 🔗 Quick Links
+
+| Документ | Описание |
+|----------|----------|
+| [Quickstart (Telegram)](openclaw-quickstart-telegram.md) | Быстрый старт за 5 минут |
+| [Architecture](OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md) | Архитектура OpenClaw v2.0.1 |
+| [System Reference](openclaw-ollama-gemini-telegram-system.md) | Технический справочник |
 
 ---
 

@@ -8,13 +8,38 @@
 
 | Категория | Документ | Назначение |
 |-----------|----------|-----------|
+| **OpenClaw Guides** | [openclaw-complete-guide-2026.md](openclaw-complete-guide-2026.md) | 📚 Полное руководство (25 Tools + 53 Skills) |
+| **OpenClaw Quickstart** | [openclaw-quickstart-telegram.md](openclaw-quickstart-telegram.md) | 🚀 Быстрый старт через Telegram |
 | **Architecture** | [OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md](OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md) | OpenClaw v2.0/v2.0.1 Architecture |
 | **Commands** | [../commands/PROTOCOL-v1.md](../commands/PROTOCOL-v1.md) | Command Protocol v1.0/v1.1 |
-| **Systems** | — | System integration docs (TODO) |
+| **Systems** | [openclaw-ollama-gemini-telegram-system.md](openclaw-ollama-gemini-telegram-system.md) | System integration reference |
 
 ---
 
 ## 📖 Documents
+
+### OpenClaw User Guides 🆕
+
+**OpenClaw Complete Guide 2026**
+- **Файл:** [`openclaw-complete-guide-2026.md`](openclaw-complete-guide-2026.md)
+- **Обновлён:** 2026-02-12
+- **Содержание:**
+  - Что такое OpenClaw (AI Agent vs Chatbot)
+  - Архитектура: 25 Tools + 53 Skills
+  - Установка и Onboarding
+  - Telegram подключение
+  - Создание Skills (шаблоны + примеры)
+  - Автоматизация (Daily Brief, Email Triage)
+  - Безопасность
+
+**OpenClaw Quickstart (Telegram)**
+- **Файл:** [`openclaw-quickstart-telegram.md`](openclaw-quickstart-telegram.md)
+- **Обновлён:** 2026-02-12
+- **Содержание:**
+  - Найти бота: @codefoundrybot
+  - Базовые команды: /start, /help, /status, /new
+  - Архетипы проектов
+  - Диагностика проблем
 
 ### Architecture & Design
 
@@ -77,5 +102,5 @@
 
 ---
 
-**Последнее обновление:** 2026-02-11
+**Последнее обновление:** 2026-02-12
 **Версия архитектуры:** v2.0.1
