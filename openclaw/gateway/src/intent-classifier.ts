@@ -133,7 +133,6 @@ export class IntentClassifier {
 
     const response = await this.ollama.chat(messages, {
       temperature: this.temperature,
-      format: 'json', // Request JSON format from Ollama
     });
 
     // Clean and parse response
