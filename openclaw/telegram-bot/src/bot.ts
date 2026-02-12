@@ -11,6 +11,60 @@ import { GatewayClient } from './gateway-client';
 import { logger } from './utils/logger';
 import { commands } from './commands';
 
+// ============================================================================
+// MARKDOWN TO HTML CONVERSION
+// ============================================================================
+
+/**
+ * Convert Markdown formatting to Telegram HTML
+ * Telegram HTML is more reliable than Markdown parse mode
+ */
+function markdownToHtml(text: string): string {
+  return text
+    // Bold: **text** or __text__ -> <b>text</b>
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/__(.+?)__/g, '<b>$1</b>')
+    // Italic: *text* or _text_ -> <i>text</i>
+    .replace(/\*(.+?)\*/g, '<i>$1</i>')
+    .replace(/_(.+?)_/g, '<i>$1</i>')
+    // Strikethrough: ~~text~~ -> <s>text</s>
+    .replace(/~~(.+?)~~/g, '<s>$1</s>')
+    // Code: `text` -> <code>text</code>
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    // Pre/code block: ```text``` -> <pre>text</pre>
+    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+    // Links: [text](url) -> <a href="url">text</a>
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+
+/**
+ * Send message with HTML parse mode and fallback to plain text
+ */
+async function sendSafeMessage(
+  bot: TelegramBot,
+  chatId: number,
+  text: string
+): Promise<void> {
+  const htmlText = markdownToHtml(text);
+
+  try {
+    await bot.sendMessage(chatId, htmlText, { parse_mode: 'HTML' });
+  } catch (error) {
+    // Fallback to plain text if HTML parsing fails
+    logger.warn('HTML parse failed, sending as plain text:', error);
+    // Remove HTML tags for plain text
+    const plainText = text
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/_(.+?)_/g, '$1')
+      .replace(/~~(.+?)~~/g, '$1')
+      .replace(/`(.+?)`/g, '$1')
+      .replace(/```[\s\S]*?```/g, (match) => match.replace(/```/g, ''))
+      .replace(/\[(.+?)\]\((.+?)\)/g, '$1 ($2)');
+    await bot.sendMessage(chatId, plainText);
+  }
+}
+
 // Global instances
 let sessionManager: SessionManager;
 let gatewayClient: GatewayClient;
@@ -159,10 +213,10 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
 
     // Check if Gateway is connected
     if (!gatewayClient.connected()) {
-      await bot.sendMessage(
+      await sendSafeMessage(
+        bot,
         chatId,
-        '⏳ *Gateway не подключен*\n\nПопробуйте позже или используйте /status для проверки.',
-        { parse_mode: 'Markdown' }
+        '⏳ Gateway не подключен\n\nПопробуйте позже или используйте /status для проверки.'
       );
       return;
     }
@@ -183,10 +237,10 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
         // Progress update - send to user
         const progress = Math.round(update.progress || 0);
         logger.info(`Progress update: ${progress}% - ${update.message}`);
-        await bot.sendMessage(
+        await sendSafeMessage(
+          bot,
           chatId,
-          `${getProgressEmoji(progress)} ${update.message}\nПрогресс: ${progress}%`,
-          { parse_mode: 'Markdown' }
+          `${getProgressEmoji(progress)} ${update.message}\nПрогресс: ${progress}%`
         );
       },
       session.sessionId
@@ -195,10 +249,10 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
     logger.info(`Received response from Gateway: type=${response.type}, has content=${!!response.content}, has error=${!!response.error}`);
 
     if (response.error) {
-      await bot.sendMessage(
+      await sendSafeMessage(
+        bot,
         chatId,
-        `❌ *Ошибка*\n\n${response.error}`,
-        { parse_mode: 'Markdown' }
+        `❌ Ошибка\n\n${response.error}`
       );
       return;
     }
@@ -207,36 +261,36 @@ async function handleNonCommandMessage(msg: TelegramBot.Message) {
     if (response.type === 'question') {
       // Handle question/clarification request
       const question = response.data?.question || response.content || 'Уточните запрос';
-      let message = `❓ *Вопрос*\n\n${question}`;
+      let message = `❓ Вопрос\n\n${question}`;
 
       if (response.data?.options && Array.isArray(response.data.options)) {
-        message += '\n\n*Варианты:*\n';
+        message += '\n\nВарианты:\n';
         response.data.options.forEach((opt: string, i: number) => {
           message += `${i + 1}. ${opt}\n`;
         });
       }
 
-      await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      await sendSafeMessage(bot, chatId, message);
       return;
     }
 
     // Send final response
     if (response.content) {
-      await bot.sendMessage(chatId, response.content, { parse_mode: 'Markdown' });
+      await sendSafeMessage(bot, chatId, response.content);
     } else if (response.data) {
       // Format data as response
-      await bot.sendMessage(
+      await sendSafeMessage(
+        bot,
         chatId,
-        `✅ *Готово!*\n\n\`\`\`\n${JSON.stringify(response.data, null, 2)}\n\`\`\``,
-        { parse_mode: 'Markdown' }
+        `✅ Готово!\n\n\`\`\`\n${JSON.stringify(response.data, null, 2)}\n\`\`\``
       );
     }
   } catch (error) {
     logger.error('Error handling non-command message:', error);
-    await bot.sendMessage(
+    await sendSafeMessage(
+      bot,
       chatId,
-      `❌ *Произошла ошибка*\n\n${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-      { parse_mode: 'Markdown' }
+      `❌ Произошла ошибка\n\n${error instanceof Error ? error.message : 'Неизвестная ошибка'}`
     );
   }
 }

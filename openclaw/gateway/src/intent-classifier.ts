@@ -14,7 +14,7 @@ import { OllamaClient, OllamaMessage } from './ollama-client';
 // TYPES
 // ============================================================================
 
-export type IntentType = 'create_project' | 'status' | 'help' | 'deploy' | 'chat';
+export type IntentType = 'create_project' | 'status' | 'help' | 'deploy' | 'chat' | 'small_talk';
 
 export interface IntentResult {
   intent: IntentType;
@@ -52,18 +52,24 @@ Supported intents:
    - Examples: "Задеплой", "Deploy app", "Запусти в прод"
    - Parameters: project_name (optional)
 
-5. chat — General conversation or questions not related to commands
-   - Examples: "Привет", "Как дела?", "Расскажи про AI", "Спасибо"
+5. small_talk — Greetings and simple phrases (HIGH PRIORITY for short messages)
+   - Examples: "привет", "ping", "как дела", "спасибо", "hello", "hi", "thx"
+   - Parameters: none
+   - IMPORTANT: Return "small_talk" with confidence 1.0 for greetings and short pleasantries
+
+6. chat — General conversation or questions not related to commands
+   - Examples: "Расскажи про AI", "Что такое Docker?", "Explain microservices"
    - Parameters: none
 
 Response format (JSON only, no markdown):
 {
-  "intent": "create_project|status|help|deploy|chat",
+  "intent": "create_project|status|help|deploy|small_talk|chat",
   "confidence": 0.0-1.0,
   "parameters": {...}
 }
 
 Rules:
+- small_talk: greetings, "ping", "thanks" → confidence 1.0
 - confidence >= 0.7: high confidence, proceed with command
 - confidence 0.5-0.7: medium confidence, extract parameters but may ask for clarification
 - confidence < 0.5: low confidence, treat as chat intent
@@ -140,7 +146,7 @@ export class IntentClassifier {
     }
 
     // Validate intent type
-    const validIntents: IntentType[] = ['create_project', 'status', 'help', 'deploy', 'chat'];
+    const validIntents: IntentType[] = ['create_project', 'status', 'help', 'deploy', 'chat', 'small_talk'];
     if (!validIntents.includes(parsed.intent)) {
       throw new Error(`Invalid intent: ${parsed.intent}`);
     }
@@ -178,7 +184,28 @@ export class IntentClassifier {
    * Fallback keyword-based classification (used when AI fails)
    */
   private fallbackClassify(message: string): IntentResult {
-    const lowerMessage = message.toLowerCase();
+    const lowerMessage = message.toLowerCase().trim();
+
+    // small_talk patterns (check FIRST for short messages)
+    // Greetings, "ping", "thanks" - very short messages
+    const smallTalkPatterns = [
+      /^(привет|здравствуй|hello|hi|hey|йо|дарова)$/i,
+      /^(ping|pong|пинг|понг)$/i,
+      /^(спасибо|благодарю|thanks|thx|ty|спс)$/i,
+      /^(как дела|как ты|как жизнь|how are you|hows it going)$/i,
+      /^(ок|окей|ага|понял|ясно|good|ok|okay)$/i,
+      /^(пока|до свидания|bye|goodbye|покеда)$/i,
+    ];
+    for (const pattern of smallTalkPatterns) {
+      if (pattern.test(message)) {
+        console.log('[INTENT-CLASSIFIER] Fallback: matched small_talk pattern');
+        return {
+          intent: 'small_talk',
+          confidence: 1.0,
+          parameters: {},
+        };
+      }
+    }
 
     // create_project patterns
     const createPatterns = [

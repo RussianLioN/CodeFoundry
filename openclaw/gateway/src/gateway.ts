@@ -40,8 +40,90 @@ const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemini-3-flash-preview:cloud';
 
 // ============================================================================
+// MARKDOWN TO HTML CONVERSION (for Telegram)
+// ============================================================================
+
+/**
+ * Convert Markdown formatting to Telegram HTML
+ * Telegram HTML is more reliable than Markdown parse mode
+ */
+function markdownToHtml(text: string): string {
+  return text
+    // Bold: **text** or __text__ -> <b>text</b>
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/__(.+?)__/g, '<b>$1</b>')
+    // Italic: *text* or _text_ -> <i>text</i>
+    .replace(/\*(.+?)\*/g, '<i>$1</i>')
+    .replace(/_(.+?)_/g, '<i>$1</i>')
+    // Strikethrough: ~~text~~ -> <s>text</s>
+    .replace(/~~(.+?)~~/g, '<s>$1</s>')
+    // Code: `text` -> <code>text</code>
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    // Pre/code block: ```text``` -> <pre>text</pre>
+    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+    // Links: [text](url) -> <a href="url">text</a>
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
+
+interface WebSocketMessage {
+  type: 'chat' | 'command' | 'status' | 'ping';
+  content: string;
+  sessionId?: string;
+  context?: Record<string, any>;
+}
+
+// ============================================================================
+// MARKDOWN TO HTML CONVERSION (for Telegram)
+// ============================================================================
+
+/**
+ * Convert Markdown formatting to Telegram HTML
+ * Telegram HTML is more reliable than Markdown parse mode
+ */
+function markdownToHtml(text: string): string {
+  return text
+    // Bold: **text** or __text__ -> <b>text</b>
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/__(.+?)__/g, '<b>$1</b>')
+    // Italic: *text* or _text_ -> <i>text</i>
+    .replace(/\*(.+?)\*/g, '<i>$1</i>')
+    .replace(/_(.+?)_/g, '<i>$1</i>')
+    // Strikethrough: ~~text~~ -> <s>text</s>
+    .replace(/~~(.+?)~~/g, '<s>$1</s>')
+    // Code: `text` -> <code>text</code>
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    // Pre/code block: ```text``` -> <pre>text</pre>
+    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+    // Links: [text](url) -> <a href="url">text</a>
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+
+// ============================================================================
+// SYSTEM PROMPTS
+// ============================================================================
+
+/**
+ * Improved System Prompt for chat interactions
+ * Key fixes:
+ * 1. Focus ONLY on the last question
+ * 2. DO NOT rephrase or list previous questions
+ * 3. Be concise
+ * 4. Use HTML formatting (not Markdown with special chars)
+ */
+const CHAT_SYSTEM_PROMPT = `Ты — AI-ассистент OpenClaw для CodeFoundry.
+
+ПРАВИЛА ОТВЕТА:
+1. Отвечай ТОЛЬКО на последний вопрос пользователя.
+2. НЕ пересказывай и НЕ перечисляй предыдущие вопросы.
+3. Будь краток — 1-3 предложения для простых вопросов.
+4. Не используй Markdown со звёздочками (*_) — используй HTML (<b><i>).
+5. Отвечай на русском языке.
+
+Если вопрос не связан с CodeFoundry или программированием — отвечай как дружелюбный собеседник.`;
 
 interface WebSocketMessage {
   type: 'chat' | 'command' | 'status' | 'ping';
@@ -387,12 +469,27 @@ class OpenClawGateway {
 
     // Route based on classified intent
     switch (intentResult.intent) {
+      case 'small_talk':
+        // Short greetings and pleasantries - respond quickly without context
+        console.log('[GATEWAY] Small talk detected, responding briefly');
+        const smallTalkMessages = [
+          { role: 'system', content: 'Ты — дружелюбный AI-ассистент. Отвечай очень кратко (1-2 предложения) на приветствия и простые фразы. На "ping" отвечай "Pong!". На "привет" отвечай "Привет! Чем могу помочь?".' },
+          { role: 'user', content }
+        ];
+        const smallTalkResponse = await this.ollama.chat(smallTalkMessages);
+
+        return {
+          type: 'complete',
+          sessionId: responseSessionId,
+          content: smallTalkResponse || 'Привет!'
+        };
+
       case 'chat':
         console.log('[GATEWAY] Chat intent detected, using free-form conversation');
 
         // Build chat messages with history context
         const chatMessages = [
-          { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian. Be concise and friendly.' },
+          { role: 'system', content: CHAT_SYSTEM_PROMPT },
           ...session.messages.slice(-5).map(m => ({
             role: 'user',
             content: m.content
@@ -426,7 +523,7 @@ class OpenClawGateway {
         console.warn(`[GATEWAY] Unknown intent: ${intentResult.intent}, treating as chat`);
         // Fallback to chat
         const fallbackMessages = [
-          { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian. Be concise and friendly.' },
+          { role: 'system', content: CHAT_SYSTEM_PROMPT },
           { role: 'user', content }
         ];
         const fallbackResponse = await this.ollama.chat(fallbackMessages);
@@ -514,7 +611,7 @@ class OpenClawGateway {
 
         // Build chat messages with history context
         const chatMessages = [
-          { role: 'system', content: 'You are a helpful AI assistant for CodeFoundry project. Answer in Russian.' },
+          { role: 'system', content: CHAT_SYSTEM_PROMPT },
           ...session.messages.slice(-5).map(m => ({
             role: 'user',
             content: m.content
@@ -1198,7 +1295,7 @@ if (require.main === module) {
         response = await gateway.handleChat(message, tempSession);
       }
 
-      // Send response via Telegram API
+      // Send response via Telegram API (using HTML parse mode)
       if (response.type === 'complete' && response.content) {
         console.log('[WEBHOOK] Sending response to Telegram:', response.content);
 
@@ -1208,15 +1305,24 @@ if (require.main === module) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: response.content,
-            parse_mode: 'Markdown'
+            text: markdownToHtml(response.content),
+            parse_mode: 'HTML'
           })
         });
 
         if (telegramResponse.ok) {
           console.log('[WEBHOOK] Response sent successfully');
         } else {
-          console.error('[WEBHOOK] Failed to send response:', await telegramResponse.text());
+          // Fallback to plain text if HTML fails
+          console.error('[WEBHOOK] HTML parse failed, retrying as plain text');
+          await fetch(telegramUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: response.content.replace(/[*_`~\[\]]/g, '')
+            })
+          });
         }
       } else if (response.type === 'question' && response.data?.question) {
         // Handle question type
@@ -1236,8 +1342,8 @@ if (require.main === module) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: message,
-            parse_mode: 'Markdown'
+            text: markdownToHtml(message),
+            parse_mode: 'HTML'
           })
         });
       }

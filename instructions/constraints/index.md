@@ -16,7 +16,7 @@
 
 | Файл | Описание | Приоритет |
 |------|----------|-----------|
-| [environment.md](./environment.md) | Правила определения окружения (local/production/staging) | P0 |
+| [environment.md](./environment.md) | Правила окружения + Node.js/TypeScript operations | P0 |
 | [docker.md](./docker.md) | Docker и docker-compose ограничения | P1 |
 | [tools.md](./tools.md) | Правила выбора инструментов (Edit vs Bash) | P1 |
 | [gitops.md](./gitops.md) | GitOps deployment workflow | P1 |
