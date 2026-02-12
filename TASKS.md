@@ -29,7 +29,7 @@
 
 ---
 
-## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (85%)
+## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (95%)
 
 > **КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ АРХИТЕКТУРЫ**
 >
@@ -102,12 +102,20 @@
 - **Unit:** 21/21 PASSED (local + remote)
 - **E2E:** Gateway ready, awaits API key deployment
 
-### ORCH-010: Deployment to ainetic.tech 🔄
-- **Статус:** ЧАСТИЧНО ВЫПОЛНЕНО
-- ✅ Gateway v2.0 запущен и healthy
-- ✅ Telegram-bot подключен
-- ⚠️ claude-code-runner: неправильный образ
-- **Health:** gateway ✅, telegram-bot ✅, runner ⚠️ (restarting)
+### ORCH-010: Deployment to ainetic.tech ✅
+- **Статус:** ВЫПОЛНЕНО (Session #22, 2026-02-12)
+- **E2E Tests:** 4/4 PASSED
+  - ✅ Gateway Health Check
+  - ✅ CLI Bridge: status command
+  - ✅ CLI Bridge: help command
+  - ✅ Gateway WebSocket Connection
+- **Services:**
+  - ✅ Gateway v2.0.1: healthy (uptime: 44h)
+  - ✅ Telegram-bot: connected (4 commands registered)
+  - ✅ Claude-runner: healthy (CLI Bridge operational)
+- **Report:** [@ref: docs/analysis/2026-02-12-ORCH-010-E2E-testing-report.md](docs/analysis/2026-02-12-ORCH-010-E2E-testing-report.md)
+- **Known Issues:** Docker socket permission (non-critical)
+- **Завершено:** 2026-02-12
 
 ### ORCH-011: GLM-4.7-Flash Production Testing ✅
 - **Статус:** ВЫПОЛНЕНО
