@@ -17,6 +17,7 @@
 import { OllamaClient } from './ollama-client';
 import { CommandGenerator } from './command-generator';
 import { CommandExecutor } from './command-executor';
+import { IntentClassifier } from './intent-classifier';
 declare class OpenClawGateway {
     private wss;
     private httpServer;
@@ -27,13 +28,16 @@ declare class OpenClawGateway {
     private ollama;
     private commandGenerator;
     private commandExecutor;
+    private intentClassifier;
     constructor(config: {
         port?: number;
         host?: string;
+        healthPort?: number;
         workspace?: string;
         ollamaClient?: OllamaClient;
         commandGenerator?: CommandGenerator;
         commandExecutor?: CommandExecutor;
+        intentClassifier?: IntentClassifier;
     });
     /**
      * Setup WebSocket event handlers

@@ -1,16 +1,23 @@
 /**
  * Command Generator - AI-Powered NLP to Command Protocol
  *
- * Converts natural language requests to Command Protocol v1.0 JSON format.
- * Uses Ollama Cloud API with gemini-3-flash-preview for intent parsing.
+ * Converts natural language requests to Command Protocol v1.1 JSON format.
+ * v2.0.1 UPDATE: Now integrates with Intent Classifier for better accuracy.
+ *
+ * Workflow:
+ * 1. Intent Classifier classifies user message → intent + confidence
+ * 2. Command Generator extracts parameters and generates Command Protocol
+ * 3. CLI Bridge executes command via Claude Code
  *
  * @see docs/commands/PROTOCOL-v1.md
+ * @see docs/OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md
  */
 import { OllamaClient } from './ollama-client';
 export interface CommandRequest {
     version: string;
     id: string;
     timestamp: string;
+    intent_confidence?: number;
     command: string;
     params: Record<string, any>;
     context: {
@@ -41,11 +48,18 @@ export declare class CommandGenerator {
     constructor(config: CommandGeneratorConfig);
     /**
      * Generate command from natural language
+     * v2.0.1 UPDATE: Now accepts pre-classified intent from Intent Classifier
      */
     generateCommand(userInput: string, context?: {
         user_id?: string;
         session_id?: string;
+        intent_confidence?: number;
     }): Promise<CommandRequest>;
+    /**
+     * Generate command from pre-classified intent (v2.0.1 - NEW)
+     * Used when Intent Classifier has already determined the intent
+     */
+    private generateFromPreClassified;
     /**
      * Parse user intent using AI
      */

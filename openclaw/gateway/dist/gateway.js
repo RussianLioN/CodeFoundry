@@ -16,16 +16,21 @@
  * @see docs/commands/PROTOCOL-v1.md
  * @see docs/OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OpenClawGateway = void 0;
 const ws_1 = require("ws");
 const http_1 = require("http");
+const express_1 = __importDefault(require("express"));
 const path_1 = require("path");
 const uuid_1 = require("uuid");
 // OpenClaw Modules (v2.0)
 const ollama_client_1 = require("./ollama-client");
 const command_generator_1 = require("./command-generator");
 const command_executor_1 = require("./command-executor");
+const intent_classifier_1 = require("./intent-classifier");
 // Configuration
 const GATEWAY_PORT = parseInt(process.env.GATEWAY_PORT || '18789');
 const HEALTH_PORT = parseInt(process.env.HEALTH_PORT || '18790');
@@ -34,6 +39,75 @@ const GATEWAY_HOST = process.env.GATEWAY_HOST || '0.0.0.0';
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'https://api.ollama.cloud';
 const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemini-3-flash-preview:cloud';
+// ============================================================================
+// MARKDOWN TO HTML CONVERSION (for Telegram)
+// ============================================================================
+/**
+ * Convert Markdown formatting to Telegram HTML
+ * Telegram HTML is more reliable than Markdown parse mode
+ */
+function markdownToHtml(text) {
+    return text
+        // Bold: **text** or __text__ -> <b>text</b>
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/__(.+?)__/g, '<b>$1</b>')
+        // Italic: *text* or _text_ -> <i>text</i>
+        .replace(/\*(.+?)\*/g, '<i>$1</i>')
+        .replace(/_(.+?)_/g, '<i>$1</i>')
+        // Strikethrough: ~~text~~ -> <s>text</s>
+        .replace(/~~(.+?)~~/g, '<s>$1</s>')
+        // Code: `text` -> <code>text</code>
+        .replace(/`(.+?)`/g, '<code>$1</code>')
+        // Pre/code block: ```text``` -> <pre>text</pre>
+        .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+        // Links: [text](url) -> <a href="url">text</a>
+        .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+// ============================================================================
+// MARKDOWN TO HTML CONVERSION (for Telegram)
+// ============================================================================
+/**
+ * Convert Markdown formatting to Telegram HTML
+ * Telegram HTML is more reliable than Markdown parse mode
+ */
+function markdownToHtml(text) {
+    return text
+        // Bold: **text** or __text__ -> <b>text</b>
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/__(.+?)__/g, '<b>$1</b>')
+        // Italic: *text* or _text_ -> <i>text</i>
+        .replace(/\*(.+?)\*/g, '<i>$1</i>')
+        .replace(/_(.+?)_/g, '<i>$1</i>')
+        // Strikethrough: ~~text~~ -> <s>text</s>
+        .replace(/~~(.+?)~~/g, '<s>$1</s>')
+        // Code: `text` -> <code>text</code>
+        .replace(/`(.+?)`/g, '<code>$1</code>')
+        // Pre/code block: ```text``` -> <pre>text</pre>
+        .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+        // Links: [text](url) -> <a href="url">text</a>
+        .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+// ============================================================================
+// SYSTEM PROMPTS
+// ============================================================================
+/**
+ * Improved System Prompt for chat interactions
+ * Key fixes:
+ * 1. Focus ONLY on the last question
+ * 2. DO NOT rephrase or list previous questions
+ * 3. Be concise
+ * 4. Use HTML formatting (not Markdown with special chars)
+ */
+const CHAT_SYSTEM_PROMPT = `Ты — AI-ассистент OpenClaw для CodeFoundry.
+
+ПРАВИЛА ОТВЕТА:
+1. Отвечай ТОЛЬКО на последний вопрос пользователя.
+2. НЕ пересказывай и НЕ перечисляй предыдущие вопросы.
+3. Будь краток — 1-3 предложения для простых вопросов.
+4. Не используй Markdown со звёздочками (*_) — используй HTML (<b><i>).
+5. Отвечай на русском языке.
+
+Если вопрос не связан с CodeFoundry или программированием — отвечай как дружелюбный собеседник.`;
 // ============================================================================
 // GATEWAY CLASS
 // ============================================================================
@@ -48,6 +122,7 @@ class OpenClawGateway {
     ollama;
     commandGenerator;
     commandExecutor;
+    intentClassifier;
     constructor(config) {
         // Configuration
         const port = config.port || GATEWAY_PORT;
@@ -62,6 +137,9 @@ class OpenClawGateway {
         });
         this.commandExecutor = config.commandExecutor || (0, command_executor_1.createCommandExecutor)({
             workspace: this.workspace,
+        });
+        this.intentClassifier = config.intentClassifier || (0, intent_classifier_1.createIntentClassifier)({
+            ollamaClient: this.ollama,
         });
         // Initialize sessions storage
         this.sessions = new Map();
@@ -147,6 +225,27 @@ class OpenClawGateway {
             projectDir: null
         };
         this.sessions.set(sessionId, session);
+        // Store WebSocket reference in session
+        session.ws = ws;
+        // Set up message handler for this connection
+        ws.on('message', async (data) => {
+            try {
+                const message = JSON.parse(data.toString());
+                await this.handleMessage(ws, message, session);
+            }
+            catch (error) {
+                console.error(`[ERROR] Failed to parse message:`, error);
+                this.sendMessage(ws, {
+                    type: 'error',
+                    sessionId: session.id,
+                    content: 'Failed to parse message. Expected valid JSON.'
+                });
+            }
+        });
+        // Set up close handler
+        ws.on('close', () => {
+            this.handleClose(sessionId);
+        });
         // Send welcome message
         this.sendMessage(ws, {
             type: 'complete',
@@ -157,7 +256,7 @@ class OpenClawGateway {
 
 Команды:
 • "Создай проект [тип] [название]"
-• "Сгенерируй агентов для [проекта]"
+• "Сгенерируй агенты для [проекта]"
 • "Задеплой на [окружение]"
 • "Покажи статус"
 
@@ -235,25 +334,93 @@ class OpenClawGateway {
      */
     async handleChat(message, session) {
         const content = message.content.trim();
+        // Use sessionId from message if provided, otherwise use session.id
+        const responseSessionId = message.sessionId || session.id;
         // Check for basic commands
         const lowerContent = content.toLowerCase();
         if (lowerContent === 'help' || lowerContent === 'помощь') {
             return {
                 type: 'complete',
-                sessionId: session.id,
+                sessionId: responseSessionId,
                 content: this.getHelpText(),
             };
         }
         if (lowerContent === 'exit' || lowerContent === 'выход') {
             return {
                 type: 'complete',
-                sessionId: session.id,
+                sessionId: responseSessionId,
                 content: '[GOODBYE] До свидания! Сессия завершена.'
             };
         }
+        // ============================================================
+        // AI-POWERED INTENT CLASSIFIER (v2.0.1 - ORCH-007.5 FIX)
+        // Classifies user intent using AI instead of keyword matching
+        // This restores AI-first architecture while maintaining performance
+        // ============================================================
+        console.log(`[GATEWAY] Classifying intent for message: "${content.substring(0, 50)}..."`);
+        const intentResult = await this.intentClassifier.classify(content);
+        console.log(`[GATEWAY] Intent: ${intentResult.intent} (confidence: ${intentResult.confidence})`);
+        // Route based on classified intent
+        switch (intentResult.intent) {
+            case 'small_talk':
+                // Short greetings and pleasantries - respond quickly without context
+                console.log('[GATEWAY] Small talk detected, responding briefly');
+                const smallTalkMessages = [
+                    { role: 'system', content: 'Ты — дружелюбный AI-ассистент. Отвечай очень кратко (1-2 предложения) на приветствия и простые фразы. На "ping" отвечай "Pong!". На "привет" отвечай "Привет! Чем могу помочь?".' },
+                    { role: 'user', content }
+                ];
+                const smallTalkResponse = await this.ollama.chat(smallTalkMessages);
+                return {
+                    type: 'complete',
+                    sessionId: responseSessionId,
+                    content: smallTalkResponse || 'Привет!'
+                };
+            case 'chat':
+                console.log('[GATEWAY] Chat intent detected, using free-form conversation');
+                // Build chat messages with history context
+                const chatMessages = [
+                    { role: 'system', content: CHAT_SYSTEM_PROMPT },
+                    ...session.messages.slice(-5).map(m => ({
+                        role: 'user',
+                        content: m.content
+                    })),
+                    { role: 'user', content }
+                ];
+                const response = await this.ollama.chat(chatMessages);
+                return {
+                    type: 'complete',
+                    sessionId: responseSessionId,
+                    content: response || 'Извините, не удалось сгенерировать ответ.'
+                };
+            case 'help':
+                return {
+                    type: 'complete',
+                    sessionId: responseSessionId,
+                    content: this.getHelpText(),
+                };
+            case 'status':
+            case 'deploy':
+            case 'create_project':
+                // These intents require command generation (continue below)
+                console.log(`[GATEWAY] Command intent: ${intentResult.intent}, proceeding to command generation`);
+                break;
+            default:
+                console.warn(`[GATEWAY] Unknown intent: ${intentResult.intent}, treating as chat`);
+                // Fallback to chat
+                const fallbackMessages = [
+                    { role: 'system', content: CHAT_SYSTEM_PROMPT },
+                    { role: 'user', content }
+                ];
+                const fallbackResponse = await this.ollama.chat(fallbackMessages);
+                return {
+                    type: 'complete',
+                    sessionId: responseSessionId,
+                    content: fallbackResponse || 'Извините, не удалось сгенерировать ответ.'
+                };
+        }
         try {
             // v2.0: Generate command from NLP
-            await this.streamProgress(session, {
+            await this.streamProgress(session, responseSessionId, {
                 stage: 'parsing',
                 progress: 10,
                 message: 'Анализирую запрос...'
@@ -261,22 +428,23 @@ class OpenClawGateway {
             const commandRequest = await this.commandGenerator.generateCommand(content, {
                 user_id: session.userId,
                 session_id: session.id,
+                intent_confidence: intentResult.confidence, // v2.0.1: Pass Intent Classifier confidence
             });
             console.log(`[GATEWAY] Generated command: ${commandRequest.command} (id: ${commandRequest.id})`);
             // v2.0: Execute via CLI Bridge
-            await this.streamProgress(session, {
+            await this.streamProgress(session, responseSessionId, {
                 stage: 'executing',
                 progress: 30,
                 message: `Выполняю команду: ${commandRequest.command}...`
             });
             const commandResponse = await this.commandExecutor.executeWithProgress(commandRequest, (stage, progress, message) => {
-                this.streamProgress(session, { stage: stage, progress, message });
+                this.streamProgress(session, responseSessionId, { stage: stage, progress, message });
             });
             // Return result
             if (commandResponse.status === 'success') {
                 return {
                     type: 'complete',
-                    sessionId: session.id,
+                    sessionId: responseSessionId,
                     content: commandResponse.message || 'Команда выполнена успешно!',
                     data: commandResponse.result,
                 };
@@ -284,7 +452,7 @@ class OpenClawGateway {
             else {
                 return {
                     type: 'error',
-                    sessionId: session.id,
+                    sessionId: responseSessionId,
                     content: commandResponse.error?.message || 'Ошибка выполнения команды',
                     data: commandResponse.error,
                 };
@@ -295,18 +463,48 @@ class OpenClawGateway {
             if (error instanceof command_generator_1.AmbiguityError) {
                 return {
                     type: 'question',
-                    sessionId: session.id,
+                    sessionId: responseSessionId,
                     question: error.message,
                     options: error.options,
                 };
             }
-            // Handle other errors
-            console.error('[GATEWAY] Command execution error:', error);
-            return {
-                type: 'error',
-                sessionId: session.id,
-                content: `Ошибка: ${error.message}`,
-            };
+            // Fallback to free-form chat if command generation fails
+            console.log('[GATEWAY] Command generation failed, falling back to free-form chat');
+            console.log('[GATEWAY] Original error:', error);
+            try {
+                console.log('[GATEWAY] About to call streamProgress...');
+                await this.streamProgress(session, responseSessionId, {
+                    stage: 'routing',
+                    progress: 50,
+                    message: 'Обрабатываю свободный чат...'
+                });
+                console.log('[GATEWAY] streamProgress completed successfully');
+                // Build chat messages with history context
+                const chatMessages = [
+                    { role: 'system', content: CHAT_SYSTEM_PROMPT },
+                    ...session.messages.slice(-5).map(m => ({
+                        role: 'user',
+                        content: m.content
+                    })),
+                    { role: 'user', content }
+                ];
+                console.log('[GATEWAY] About to call Ollama.chat...');
+                const response = await this.ollama.chat(chatMessages);
+                console.log('[GATEWAY] Ollama.chat completed, response:', response?.substring(0, 100));
+                return {
+                    type: 'complete',
+                    sessionId: responseSessionId,
+                    content: response,
+                };
+            }
+            catch (chatError) {
+                console.error('[GATEWAY] Free-form chat error:', chatError);
+                return {
+                    type: 'error',
+                    sessionId: responseSessionId,
+                    content: `Ошибка обработки сообщения: ${chatError.message}`,
+                };
+            }
         }
     }
     /**
@@ -603,15 +801,22 @@ Location: ${project_name}/.claude/
     /**
      * Stream progress to WebSocket client
      */
-    async streamProgress(session, update) {
+    async streamProgress(session, responseSessionId, update) {
+        const sessionId = responseSessionId || session.id;
+        console.log(`[STREAM_PROGRESS] Called for session: ${session.id}, responseSessionId: ${responseSessionId || 'none'}, using: ${sessionId}`);
         const ws = this.getWebSocket(session.id);
-        if (!ws)
+        console.log('[STREAM_PROGRESS] WebSocket found:', !!ws);
+        if (!ws) {
+            console.log('[STREAM_PROGRESS] No WebSocket found, returning');
             return;
+        }
+        console.log('[STREAM_PROGRESS] Sending message...');
         this.sendMessage(ws, {
             type: 'progress',
-            sessionId: session.id,
+            sessionId: sessionId,
             ...update
         });
+        console.log('[STREAM_PROGRESS] Message sent successfully');
     }
     /**
      * Get WebSocket connection by session ID
@@ -781,10 +986,164 @@ exports.OpenClawGateway = OpenClawGateway;
 // MAIN ENTRY POINT
 // ============================================================================
 if (require.main === module) {
+    // Global error handlers for debugging
+    process.on('uncaughtException', (error) => {
+        console.error('[UNCAUGHT EXCEPTION]', error);
+        console.error('[UNCAUGHT EXCEPTION] Stack:', error.stack);
+        // Give time for logging before exit
+        setTimeout(() => process.exit(1), 100);
+    });
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('[UNHANDLED REJECTION]', reason);
+        console.error('[UNHANDLED REJECTION] Promise:', promise);
+    });
     const gateway = new OpenClawGateway({
         port: GATEWAY_PORT,
         host: GATEWAY_HOST,
         workspace: process.env.WORKSPACE || '/workspace/system-prompts'
+    });
+    // Set up HTTP server for Telegram webhook
+    const app = (0, express_1.default)();
+    app.use(express_1.default.json());
+    // Health check endpoint
+    app.get('/health', (req, res) => {
+        res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+    });
+    // Telegram webhook endpoint
+    app.post('/telegram', async (req, res) => {
+        console.log('[WEBHOOK] Received Telegram message:', JSON.stringify(req.body, null, 2));
+        try {
+            const update = req.body;
+            if (!update.message) {
+                return res.sendStatus(200);
+            }
+            const chatId = update.message.chat.id;
+            const text = update.message.text;
+            if (!text) {
+                return res.sendStatus(200);
+            }
+            // Create a temporary session for this request
+            const tempSessionId = `telegram_${chatId}_${Date.now()}`;
+            // Create WebSocket-like message
+            const message = {
+                type: 'chat',
+                content: text,
+                sessionId: tempSessionId,
+                userId: update.message.from?.id?.toString(),
+                context: {
+                    telegram_chat_id: chatId.toString(),
+                    telegram_message_id: update.message.message_id?.toString(),
+                }
+            };
+            // Create temporary session context
+            const tempSession = {
+                id: tempSessionId,
+                userId: message.userId,
+                username: update.message.from?.username,
+                startedAt: new Date(),
+                lastActivity: new Date(),
+                messages: [],
+                context: { ...message.context },
+                currentAgent: 'telegram',
+                currentTask: null,
+                projectDir: gateway.workspace,
+            };
+            // Store session temporarily
+            gateway.sessions.set(tempSessionId, tempSession);
+            // Find WebSocket for this session (will be used for responses)
+            const ws = Array.from(gateway.wss.clients).find((client) => {
+                const session = gateway.sessions.get(tempSessionId);
+                return session && client === session.ws;
+            });
+            if (ws) {
+                tempSession.ws = ws;
+            }
+            // Handle the message - directly call handleChat for HTTP endpoint
+            let response;
+            // Determine message type
+            const lowerContent = text.toLowerCase();
+            if (lowerContent === '/status') {
+                response = {
+                    type: 'complete',
+                    sessionId: tempSessionId,
+                    content: `Статус сессии:\n\nАгент: ${tempSession.currentAgent}\nСообщений: ${tempSession.messages.length}`
+                };
+            }
+            else if (lowerContent === '/help' || lowerContent === 'помощь') {
+                response = {
+                    type: 'complete',
+                    sessionId: tempSessionId,
+                    content: gateway.getHelpText()
+                };
+            }
+            else {
+                // Call handleChat for regular messages
+                response = await gateway.handleChat(message, tempSession);
+            }
+            // Send response via Telegram API (using HTML parse mode)
+            if (response.type === 'complete' && response.content) {
+                console.log('[WEBHOOK] Sending response to Telegram:', response.content);
+                const telegramUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+                const telegramResponse = await fetch(telegramUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: markdownToHtml(response.content),
+                        parse_mode: 'HTML'
+                    })
+                });
+                if (telegramResponse.ok) {
+                    console.log('[WEBHOOK] Response sent successfully');
+                }
+                else {
+                    // Fallback to plain text if HTML fails
+                    console.error('[WEBHOOK] HTML parse failed, retrying as plain text');
+                    await fetch(telegramUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: chatId,
+                            text: response.content.replace(/[*_`~\[\]]/g, '')
+                        })
+                    });
+                }
+            }
+            else if (response.type === 'question' && response.data?.question) {
+                // Handle question type
+                const question = response.data.question;
+                let message = `❓ Вопрос:\n\n${question}`;
+                if (response.data.options && Array.isArray(response.data.options)) {
+                    message += '\n\nВарианты:\n';
+                    response.data.options.forEach((opt, i) => {
+                        message += `${i + 1}. ${opt}\n`;
+                    });
+                }
+                const telegramUrl = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+                await fetch(telegramUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: markdownToHtml(message),
+                        parse_mode: 'HTML'
+                    })
+                });
+            }
+            // Clean up temporary session
+            gateway.sessions.delete(tempSessionId);
+            res.sendStatus(200);
+        }
+        catch (error) {
+            console.error('[WEBHOOK] Error:', error);
+            res.sendStatus(500);
+        }
+    });
+    // Start HTTP server
+    const HTTP_PORT = parseInt(process.env.HTTP_PORT || '8081');
+    app.listen(HTTP_PORT, '0.0.0.0', () => {
+        console.log(`[HTTP] Server listening on port ${HTTP_PORT}`);
+        console.log(`[HTTP] Telegram webhook endpoint: http://0.0.0.0:${HTTP_PORT}/telegram`);
     });
     // Graceful shutdown
     process.on('SIGTERM', () => gateway.shutdown());

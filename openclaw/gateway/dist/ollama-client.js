@@ -17,7 +17,7 @@ exports.createOllamaClient = createOllamaClient;
 exports.createLocalOllamaClient = createLocalOllamaClient;
 const axios_1 = __importDefault(require("axios"));
 const DEFAULT_CONFIG = {
-    baseURL: 'https://api.ollama.cloud',
+    baseURL: 'https://ollama.com',
     model: 'gemini-3-flash-preview:cloud',
     timeout: 120000, // 2 minutes
 };
@@ -196,7 +196,7 @@ exports.OllamaClient = OllamaClient;
  * Create Ollama client from environment variables
  */
 function createOllamaClient() {
-    const baseURL = process.env.OLLAMA_BASE_URL || 'https://api.ollama.cloud';
+    const baseURL = process.env.OLLAMA_BASE_URL || 'https://ollama.com';
     const apiKey = process.env.OLLAMA_API_KEY;
     const model = process.env.OLLAMA_MODEL || 'gemini-3-flash-preview:cloud';
     const timeout = parseInt(process.env.OLLAMA_TIMEOUT || '120000');
