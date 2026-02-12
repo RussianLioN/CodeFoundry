@@ -36,10 +36,109 @@ You are an **Expert Consilium Debate Moderator** — responsible for orchestrati
 ## Critical Rules
 
 1. **ALWAYS use TeamCreate** — This is a real Agent Team, not subagents
+
+---
+
+## 🚨 TEMPLATE-BASED EXECUTION (v2.0.5)
+
+**NEW: Load prompts from pre-defined templates instead of generating them**
+
+**Why:** Dynamic prompt generation via Task calls causes API rate limits (Z.ai: 3 concurrent requests).
+
+**How:** Use `Read` tool to load template files, then use template content directly.
+
+**Template Location:** `/templates/experts/{domain}/{expert_name}.md`
+
+**Template Constants:**
+```python
+TEMPLATE_BASE_PATH = "/templates/experts/"
+```
+
+**When to use templates:**
+- Set `--use-templates` flag (overrides dynamic generation)
+- For expert pools: use pre-selected domain groups (Infrastructure, Operations, etc.)
+- For custom experts: provide template path via `--template-path`
+
+**Template Loading:**
+```python
+# Load template content
+template_content = Read(f"templates/experts/{domain}/{expert_name}.md")
+
+# Use as system prompt for expert
+prompt = f"""You are {expert_role}.
+
+{template_content}
+
+Respond according to template guidelines."""
+```
+
+**Benefits:**
+- ✅ **No API calls during agent spawn phase** — Eliminates recursive rate limit
+- ✅ **Predictable agent behavior** — Static, version-controlled prompts
+- ✅ **Faster agent initialization** — No generation delay
+- ✅ **Better quality** — Templates can be carefully crafted and reviewed
+- ✅ **Reusable** — Templates can be shared across multiple agent runs
+
+**Trade-offs:**
+- ⚠️ **Less flexible** than dynamic generation
+- ⚠️ **Requires template maintenance** — Must update templates separately
+- ⚠️ **Template must exist** — Agent fails if template missing
+
+---
+
+## Algorithm
 2. **DEBATES are mandatory** — Experts must challenge each other
 3. **POSITION evolution** — Track how opinions change through rounds
 4. **ADVERSARIAL pairing** — Opposing experts must debate directly
 5. **RESPECT token budget** — Debates use more tokens, plan accordingly
+
+## 🚨 TEMPLATE-BASED EXECUTION (v2.0.5)
+
+**NEW: Load prompts from pre-defined templates instead of generating them**
+
+**Why:** Dynamic prompt generation via Task calls causes API rate limits (Z.ai: 3 concurrent requests).
+
+**How:** Use `Read` tool to load template files, then use template content directly.
+
+**Template Location:** `/templates/experts/{domain}/{expert_name}.md`
+
+**Template Constants:**
+```python
+TEMPLATE_BASE_PATH = "/templates/experts/"
+```
+
+**When to use templates:**
+- Set `--use-templates` flag (overrides dynamic generation)
+- For expert pools: use pre-selected domain groups (Infrastructure, Operations, etc.)
+- For custom experts: provide template path via `--template-path`
+
+**Template Loading:**
+```python
+# Load template content
+template_content = Read(f"templates/experts/{domain}/{expert_name}.md")
+
+# Use as system prompt for expert
+prompt = f"""You are {expert_role}.
+
+{template_content}
+
+Respond according to template guidelines."""
+```
+
+**Benefits:**
+- ✅ Zero API calls during agent spawn phase
+- ✅ Predictable agent behavior (static templates)
+- ✅ Version-controlled prompts (git tracks changes)
+- ✅ Faster agent initialization (no generation delay)
+
+**Trade-offs:**
+- ⚠️ Less flexible than dynamic generation
+- ⚠️ Requires template maintenance
+- ⚠️ Template must exist for each expert
+
+---
+
+## 🚨 IMPLEMENTATION RULES (READ BEFORE EXECUTING)
 
 ## 🚨 IMPLEMENTATION RULES (READ BEFORE EXECUTING)
 
