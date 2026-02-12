@@ -20,16 +20,16 @@
 | Фаза | Статус | Прогресс |
 |------|--------|----------|
 | **Фазы 1-10, 13:** | ✅ Завершены | 100% [@ref: archive](tasks/archive/phases-01-10.md) |
-| **Фаза 8.5:** Telegram Bot | 🔄 В работе | 25% |
+| **Фаза 8.5:** Telegram Bot | 🔄 В работе | 30% |
 | **Фаза 9:** Documentation Agent | 🔄 MVP done | 80% |
-| **Фаза 11:** Orchestrator Architecture | 🔄 БЛОКИРОВАНО | 60% |
+| **Фаза 11:** Orchestrator Architecture | 🔄 В работе | 85% |
 | **Фаза 12:** Documentation Review | ⏳ Бэклог | 0% |
 | **Фаза 14:** Housekeeping + Doc Agent | ✅ Завершена | 100% |
 | **Фаза 15:** Agent Teams Integration | ⏳ Бэклог | 0% [@ref: plan](docs/reference/agent-teams-integration-plan.md) |
 
 ---
 
-## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (95%)
+## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (85%)
 
 > **КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ АРХИТЕКТУРЫ**
 >
@@ -123,6 +123,34 @@
 - **All containers:** ✅ healthy
 - **Завершено:** 2025-02-05
 
+### ORCH-012: Install Claude CLI in Runner ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** 🔴 ВЫСОКИЙ (P0) — ВАЖНО
+- **Срок:** После полной настройки OpenClaw и всех необходимых навыков
+- **Описание:** Установка Claude CLI в контейнер `openclaw-orchestrator-claude-runner` для работы CLI Bridge
+- **Диагностика:** `docker exec openclaw-orchestrator-claude-runner which claude` → "Claude CLI not found"
+- **Влияние:** Без Claude CLI невозможно выполнять команды через CLI Bridge
+- **Файлы:**
+  - `server/containers/claude-code-runner/Dockerfile`
+  - `openclaw/docker/docker-compose.orchestrator.yml`
+- **Зависимости:** ORCH-013 (openclaw.json) должен быть настроен первым
+
+### ORCH-013: Create openclaw.json Configuration ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** 🔴 КРИТИЧЕСКИЙ (P0) — БЛОКИРУЮЩАЯ
+- **Описание:** Создание конфигурационного файла `openclaw.json` для корректной работы OpenClaw
+- **Диагностика:** `docker exec openclaw-orchestrator-gateway cat /app/config/openclaw.json` → пустой файл
+- **Влияние:** Конфигурация через ENV работает, но для совместимости с официальным OpenClaw нужен JSON
+- **Файлы:**
+  - `openclaw/config/openclaw.json`
+  - `openclaw/docker/docker-compose.orchestrator.yml` (volume mount)
+- **Содержимое:**
+  - Model configuration (gemini-3-flash-preview:cloud)
+  - Gateway settings (port 18789, auth)
+  - Workspace paths
+  - Channel configurations (Telegram)
+- **Связано:** Expert Consilium от 2026-02-12 (настройка через wizard vs ENV vs JSON)
+
 ---
 
 ## 🤖 Фаза 8.5: Telegram Bot Integration (25%)
@@ -145,6 +173,22 @@
 ### TELEBOT-004: Production Hardening ⏳
 - **Статус:** ЗАПЛАНИРОВАНО
 - **Задачи:** Redis session persistence, rate limiting, enhanced error handling
+
+### TELEBOT-005: Setup Telegram Webhook ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** 🟡 СРЕДНИЙ (P1)
+- **Описание:** Настройка Telegram webhook вместо polling mode для production стабильности
+- **Диагностика:** `curl -s 'https://api.telegram.org/bot<TOKEN>/getWebhookInfo'` → `"url": ""`
+- **Текущее состояние:** Бот работает в polling mode (ОК для MVP, но webhook надёжнее)
+- **Требования:**
+  - HTTPS endpoint через Traefik
+  - Webhook URL: `https://ainetic.tech/telegram/webhook`
+  - Webhook secret для верификации
+- **Файлы:**
+  - `openclaw/docker/docker-compose.orchestrator.yml` (Traefik labels)
+  - `openclaw/telegram-bot/src/bot.ts` (webhook handler)
+  - `server/.env.orchestrator` (TELEGRAM_WEBHOOK_URL, TELEGRAM_WEBHOOK_SECRET)
+- **Зависимости:** Traefik уже настроен на сервере
 
 ---
 
