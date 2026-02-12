@@ -6,38 +6,31 @@
 
 ## 📌 Current Context
 
-**Current Session:** #22 (2026-02-11)
-**Focus:** Session #21 closure + Git operations
-**Status:** Ready for new session
+**Current Session:** #23 (2026-02-12)
+**Focus:** OpenClaw Diagnostics & Task Planning
+**Status:** ✅ COMPLETED
 
-**Session Summary:** [@ref: docs/sessions/session-summary-2026-02-11-s21.md](docs/sessions/session-summary-2026-02-11-s21.md)
+**Session Summary:**
+- ✅ OpenClaw контейнеры: диагностика + healthcheck fix
+- ✅ Expert Consilium: настройка OpenClaw через wizard vs ENV
+- ✅ TASKS.md: добавлены ORCH-012, ORCH-013, TELEBOT-005
 
-**Previous Session (#21, 2026-02-11):**
-- ✅ P0 Implementation: ORCH-007.5 fix (Intent Classifier)
-  - Created intent-classifier.ts (320+ lines)
-  - Integrated into gateway.ts
-  - Updated CLI Bridge with deploy command
-- ✅ P1 Documentation: Architecture + Protocol updates
-  - OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md v2.0.1
-  - PROTOCOL-v1.md → v1.1 with intent_confidence
-  - command-generator.ts optimization
-- ✅ ORCH-009: Unit Tests (40+ test cases)
-  - test/intent-classifier.test.ts (360+ lines)
-  - test/gateway.test.ts integration tests
-  - package.json test scripts
+**Achievements (Session #23):**
+- 2 commits, 51 lines changed
+- OpenClaw containers: all healthy ✅
+- Telegram-bot healthcheck: FIXED (pgrep instead of HTTP)
+- Phase 11: 60% BLOCKED → 85% In Progress
+- Phase 8.5: 25% → 30%
 
-**Achievements (Session #21):**
-- 3 commits, 7 files changed, +1068 lines
-- ORCH-007.5 critical bug: FIXED ✅
-- Production readiness: 95% (остаётся E2E validation)
-- All quality gates: PASSED
-
-**Lessons Learned:**
-- Expert Consilium valuable for meta-problems
-- Parallel agent execution faster than sequential
-- Layered defense critical for reliability
+**Key Findings:**
+1. OpenClaw Orchestrator v2.0 работает (Gateway + Ollama Cloud + Telegram)
+2. CLI Bridge не работает — Claude CLI не установлен в runner
+3. ENV-driven конфигурация работает, но нужен openclaw.json
 
 **Next Steps:** See [@ref: TASKS.md](TASKS.md)
+- ORCH-013: Create openclaw.json (блокирующая)
+- ORCH-012: Install Claude CLI (после настройки)
+- TELEBOT-005: Setup Telegram webhook
 
 ---
 
@@ -50,6 +43,8 @@ Full session history:
 - [@ref: sessions/archive/sessions-17.md](sessions/archive/sessions-17.md)
 - [@ref: sessions/archive/sessions-18.md](sessions/archive/sessions-18.md)
 - [@ref: sessions/archive/sessions-19.md](sessions/archive/sessions-19.md)
-- [@ref: sessions/archive/sessions-20.md](sessions/archive/sessions-20.md) ← **NEW**
+- [@ref: sessions/archive/sessions-20.md](sessions/archive/sessions-20.md)
+- [@ref: sessions/archive/sessions-21.md](sessions/archive/sessions-21.md)
+- [@ref: sessions/archive/sessions-22.md](sessions/archive/sessions-22.md) ← **NEW**
 
 ---
