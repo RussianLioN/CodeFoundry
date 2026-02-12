@@ -29,7 +29,7 @@
 
 ---
 
-## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (75%)
+## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (85%)
 
 > **КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ АРХИТЕКТУРЫ**
 >
@@ -79,7 +79,7 @@
 - **Проблема:** Intent Pre-Classifier (commit `1d4a1aa`) обходит OpenClaw для свободных сообщений
 - **Решение:** Вариант D — AI Intent Classifier
 - **Файлы:**
-  - ✅ `openclaw/gateway/src/intent-classifier.ts` (новый модуль, 280+ строк)
+  - ✅ `openclaw/gateway/src/intent-classifier.ts` (новый модуль, 320+ строк)
   - ✅ `openclaw/gateway/src/gateway.ts` (интеграция Intent Classifier)
   - ✅ `server/scripts/claude-wrapper.sh` (обновлён: команда `deploy`, логирование confidence)
 - **Функциональность:**
@@ -88,8 +88,9 @@
   - Extraction параметров из естественного языка
   - Fallback на keyword matching при ошибках AI
 - **Intents:** create_project, status, help, deploy, chat
-- **Тесты:** Требуется unit + integration тестирование (ORCH-009)
+- **Тесты:** ✅ 40+ unit tests PASSED
 - **Завершено:** 2026-02-11
+- **Analysis:** [@ref: docs/plans/2026-02-11-FINAL-artifact-migration-plan.md](docs/plans/2026-02-11-FINAL-artifact-migration-plan.md)
 
 ### ORCH-008: Docker Compose Update ✅
 - **Статус:** ВЫПОЛНЕНО
@@ -299,6 +300,36 @@
 - **Приоритет:** НОРМАЛЬНЫЙ
 - **Файлы:** `SESSION.md`, `CHANGELOG.md`
 
+### AT-015: Rate Limit Compatibility ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** ВЫСОКИЙ (P0 для Agent Teams)
+- **Источник:** [@ref: docs/analysis/2026-02-11-zai-glm-rate-limit-analysis.md](docs/analysis/2026-02-11-zai-glm-rate-limit-analysis.md)
+- **Содержание:**
+  - Update Expert Consilium v2: batch size 4→2
+  - Add rate limit monitoring (429 errors)
+  - Implement retry logic with exponential backoff
+  - Test with parallel agent spawning
+
+### AT-016: Orphan Agents Routing Rules ⏳
+- **Статус:** ЗАПЛАНИРОВАНО
+- **Приоритет:** СРЕДНИЙ (P1)
+- **Источник:** [@ref: docs/analysis/2026-02-11-auto-routing-analysis.md](docs/analysis/2026-02-11-auto-routing-analysis.md)
+- **Содержание:**
+  - Add routing rule for tasks-sync (keywords: "sync tasks", "github issues")
+  - Add routing rule for ollama-gemini-researcher (keywords: "ollama", "gemini")
+  - Update auto-routing-rules.json
+  - Test routing with sample queries
+
+### AT-017: Token Guidelines Quality Gates Update ⏳
+- **Статус:** ЧАСТИЧНО ВЫПОЛНЕНО
+- **Приоритет:** НИЗКИЙ (P2)
+- **Источник:** [@ref: docs/analysis/2026-02-11-agent-token-limits-consilium.md](docs/analysis/2026-02-11-agent-token-limits-consilium.md)
+- **Содержание:**
+  - Adaptive warning при >2× guideline
+  - Modular-first validation (@ref priority)
+  - Auto-compaction suggestions
+  - Quarterly review cycle
+
 ---
 
 ## 🔀 Фаза 16: Subagent Framework Integration (BACKLOG)
@@ -306,6 +337,7 @@
 > **Источник:** Expert Consilium v2.0 + architect-comparative + subagent-architect
 > **Стратегия:** Гибридный подход — v2.0 для production + подготовка инфраструктуры для субагентов
 > **План:** [@ref: docs/plans/2026-02-11-FINAL-artifact-migration-plan.md](docs/plans/2026-02-11-FINAL-artifact-migration-plan.md)
+> **Анализ приоритетов:** [@ref: docs/analysis/2026-02-12-expert-consilium-priority-review.md](docs/analysis/2026-02-12-expert-consilium-priority-review.md)
 
 ### SUB-001: Subagent Framework Core ⏳
 - **Статус:** ЗАПЛАНИРОВАНО
