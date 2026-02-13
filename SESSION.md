@@ -6,31 +6,28 @@
 
 ## 📌 Current Context
 
-**Current Session:** #23 (2026-02-12)
-**Focus:** OpenClaw Diagnostics & Task Planning
+**Current Session:** #24 (2026-02-13)
+**Focus:** OpenClaw Suspension Decision
 **Status:** ✅ COMPLETED
 
 **Session Summary:**
-- ✅ OpenClaw контейнеры: диагностика + healthcheck fix
-- ✅ Expert Consilium: настройка OpenClaw через wizard vs ENV
-- ✅ TASKS.md: добавлены ORCH-012, ORCH-013, TELEBOT-005
+- ✅ Expert Consilium: решение о приостановке OpenClaw (consensus: 0.76)
+- ✅ TASKS.md: Phase 11 → PAUSED, перемещена в конец файла
+- ✅ Приоритеты понижены: 🔴 КРИТИЧЕСКИЙ → 🟡 СРЕДНИЙ
 
-**Achievements (Session #23):**
-- 2 commits, 51 lines changed
-- OpenClaw containers: all healthy ✅
-- Telegram-bot healthcheck: FIXED (pgrep instead of HTTP)
-- Phase 11: 60% BLOCKED → 85% In Progress
-- Phase 8.5: 25% → 30%
-
-**Key Findings:**
-1. OpenClaw Orchestrator v2.0 работает (Gateway + Ollama Cloud + Telegram)
-2. CLI Bridge не работает — Claude CLI не установлен в runner
-3. ENV-driven конфигурация работает, но нужен openclaw.json
+**Key Decision:**
+> **Приостановить OpenClaw** на ainetic.tech, освободить Docker ресурсы (~3GB).
+> - Infrastructure: SUPPORT (0.77)
+> - Delivery: STRONG SUPPORT (0.85)
+> - Quality: CONDITIONAL (0.63)
+> - AI/Architecture: SUPPORT (0.78)
+>
+> **Восстановление:** `git pull && make deploy`
 
 **Next Steps:** See [@ref: TASKS.md](TASKS.md)
-- ORCH-013: Create openclaw.json (блокирующая)
-- ORCH-012: Install Claude CLI (после настройки)
-- TELEBOT-005: Setup Telegram webhook
+- Phase 15: Agent Teams Integration (текущий фокус)
+- Phase 8.5: Telegram Bot
+- Phase 9: Documentation Agent
 
 ---
 
@@ -45,6 +42,7 @@ Full session history:
 - [@ref: sessions/archive/sessions-19.md](sessions/archive/sessions-19.md)
 - [@ref: sessions/archive/sessions-20.md](sessions/archive/sessions-20.md)
 - [@ref: sessions/archive/sessions-21.md](sessions/archive/sessions-21.md)
-- [@ref: sessions/archive/sessions-22.md](sessions/archive/sessions-22.md) ← **NEW**
+- [@ref: sessions/archive/sessions-22.md](sessions/archive/sessions-22.md)
+- [@ref: sessions/archive/sessions-23.md](sessions/archive/sessions-23.md) ← **NEW**
 
 ---

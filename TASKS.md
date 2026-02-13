@@ -9,7 +9,7 @@
 ## Статус Проекта: 🔄 В РАЗРАБОТКЕ
 
 **Версия:** 1.5.0
-**Текущий фокус:** Phase 8.5, 9, 11, 12 — Активные задачи
+**Текущий фокус:** Phase 8.5, 9, 15 — Активные задачи
 **Общий Прогресс:** 96%
 **Новая фаза:** Phase 15 — Agent Teams Integration [@ref: plan](docs/reference/agent-teams-integration-plan.md)
 
@@ -22,134 +22,10 @@
 | **Фазы 1-10, 13:** | ✅ Завершены | 100% [@ref: archive](tasks/archive/phases-01-10.md) |
 | **Фаза 8.5:** Telegram Bot | 🔄 В работе | 30% |
 | **Фаза 9:** Documentation Agent | 🔄 MVP done | 80% |
-| **Фаза 11:** Orchestrator Architecture | 🔄 В работе | 85% |
+| **Фаза 11:** Orchestrator Architecture | ⏸️ PAUSED | 85% |
 | **Фаза 12:** Documentation Review | ⏳ Бэклог | 0% |
 | **Фаза 14:** Housekeeping + Doc Agent | ✅ Завершена | 100% |
 | **Фаза 15:** Agent Teams Integration | ⏳ Бэклог | 0% [@ref: plan](docs/reference/agent-teams-integration-plan.md) |
-
----
-
-## 🤖 Фаза 11: OpenClaw Orchestrator Architecture (85%)
-
-> **КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ АРХИТЕКТУРЫ**
->
-> OpenClaw больше НЕ является разработчиком. OpenClaw = Orchestrator/UI Layer, Claude Code = Developer.
-
-### ORCH-001: Expert Review & Architecture Design ✅
-- **Статус:** ВЫПОЛНЕНО
-- **Консенсус:** **8.8/10** — ОТЛИЧНО, РЕАЛИЗУЙТЕ
-- **Файлы:** `docs/experts-opinions-openclaw-orchestrator.md`, `docs/OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md`
-- **Завершено:** 2025-02-05
-
-### ORCH-002: Ollama Cloud Research ✅
-- **Статус:** ВЫПОЛНЕНО
-- gemini-3-flash-preview: FREE или $0.5/1M tokens, 1M context window
-- **Завершено:** 2025-02-05
-
-### ORCH-003: Command Protocol v1.0 Definition ✅
-- **Статус:** ВЫПОЛНЕНО
-- **Файлы:** `docs/commands/PROTOCOL-v1.md` — полный spec (320+ строк)
-- **MVP Commands:** create_project, status, help
-- **Завершено:** 2025-02-05
-
-### ORCH-004: CLI Bridge Implementation ✅
-- **Статус:** ВЫПОЛНЕНО + ПРОТЕСТИРОВАНО
-- **Файлы:** `server/scripts/claude-wrapper.sh` (320+ строк), `server/scripts/test-commands.sh`
-- **Тесты:** ✅ 4/4 PASSED (ainetic.tech validation)
-- **Завершено:** 2025-02-05
-
-### ORCH-005: OpenClaw Gateway Update ✅
-- **Статус:** ВЫПОЛНЕНО
-- **Модули:** ollama-client.ts, command-generator.ts, command-executor.ts
-- **Завершено:** 2025-02-05
-
-### ORCH-006: Documentation Updates ⏳
-- **Статус:** ЗАПЛАНИРОВАНО
-- **Приоритет:** ВЫСОКИЙ (P1)
-- **Файлы:** PROJECT.md, README.md, docs/INDEX.md, docs/ARCHITECTURE-ANALYSIS.md
-
-### ORCH-007: Telegram Bot MVP (Orchestrator) ⏳
-- **Статус:** ЗАПЛАНИРОВАНО
-- **Приоритет:** ВЫСОКИЙ (P1)
-- **Команды:** /new, /status, /help
-
-### ORCH-007.5: AI Intent Classifier Implementation ✅
-- **Статус:** ВЫПОЛНЕНО (Session #21, 2026-02-11)
-- **Приоритет:** 🔴 КРИТИЧЕСКИЙ (P0) — РЕШЕНО
-- **Проблема:** Intent Pre-Classifier (commit `1d4a1aa`) обходит OpenClaw для свободных сообщений
-- **Решение:** Вариант D — AI Intent Classifier
-- **Файлы:**
-  - ✅ `openclaw/gateway/src/intent-classifier.ts` (новый модуль, 320+ строк)
-  - ✅ `openclaw/gateway/src/gateway.ts` (интеграция Intent Classifier)
-  - ✅ `server/scripts/claude-wrapper.sh` (обновлён: команда `deploy`, логирование confidence)
-- **Функциональность:**
-  - AI-powered классификация intent (gemini-3-flash-preview)
-  - Confidence scoring с threshold (0.7 по умолчанию)
-  - Extraction параметров из естественного языка
-  - Fallback на keyword matching при ошибках AI
-- **Intents:** create_project, status, help, deploy, chat
-- **Тесты:** ✅ 40+ unit tests PASSED
-- **Завершено:** 2026-02-11
-- **Analysis:** [@ref: docs/plans/2026-02-11-FINAL-artifact-migration-plan.md](docs/plans/2026-02-11-FINAL-artifact-migration-plan.md)
-
-### ORCH-008: Docker Compose Update ✅
-- **Статус:** ВЫПОЛНЕНО
-- **Файлы:** `openclaw/docker/docker-compose.orchestrator.yml`, `server/docker-compose.orchestrator.yml`
-- **Завершено:** 2025-02-05
-
-### ORCH-009: Testing & Validation 🔄
-- **Статус:** Unit tests ✅, E2E ⏳ (blocked by ORCH-010)
-- **Unit:** 21/21 PASSED (local + remote)
-- **E2E:** Gateway ready, awaits API key deployment
-
-### ORCH-010: Deployment to ainetic.tech ✅
-- **Статус:** ВЫПОЛНЕНО (Session #22, 2026-02-12)
-- **E2E Tests:** 4/4 PASSED
-  - ✅ Gateway Health Check
-  - ✅ CLI Bridge: status command
-  - ✅ CLI Bridge: help command
-  - ✅ Gateway WebSocket Connection
-- **Services:**
-  - ✅ Gateway v2.0.1: healthy (uptime: 44h)
-  - ✅ Telegram-bot: connected (4 commands registered)
-  - ✅ Claude-runner: healthy (CLI Bridge operational)
-- **Report:** [@ref: docs/analysis/2026-02-12-ORCH-010-E2E-testing-report.md](docs/analysis/2026-02-12-ORCH-010-E2E-testing-report.md)
-- **Known Issues:** Docker socket permission (non-critical)
-- **Завершено:** 2026-02-12
-
-### ORCH-011: GLM-4.7-Flash Production Testing ✅
-- **Статус:** ВЫПОЛНЕНО
-- **Файлы:** `containers/claude-code-runner/Dockerfile`, `docs/lessons/websocket-client-health-check.md`
-- **All containers:** ✅ healthy
-- **Завершено:** 2025-02-05
-
-### ORCH-012: Install Claude CLI in Runner ⏳
-- **Статус:** ЗАПЛАНИРОВАНО
-- **Приоритет:** 🔴 ВЫСОКИЙ (P0) — ВАЖНО
-- **Срок:** После полной настройки OpenClaw и всех необходимых навыков
-- **Описание:** Установка Claude CLI в контейнер `openclaw-orchestrator-claude-runner` для работы CLI Bridge
-- **Диагностика:** `docker exec openclaw-orchestrator-claude-runner which claude` → "Claude CLI not found"
-- **Влияние:** Без Claude CLI невозможно выполнять команды через CLI Bridge
-- **Файлы:**
-  - `server/containers/claude-code-runner/Dockerfile`
-  - `openclaw/docker/docker-compose.orchestrator.yml`
-- **Зависимости:** ORCH-013 (openclaw.json) должен быть настроен первым
-
-### ORCH-013: Create openclaw.json Configuration ⏳
-- **Статус:** ЗАПЛАНИРОВАНО
-- **Приоритет:** 🔴 КРИТИЧЕСКИЙ (P0) — БЛОКИРУЮЩАЯ
-- **Описание:** Создание конфигурационного файла `openclaw.json` для корректной работы OpenClaw
-- **Диагностика:** `docker exec openclaw-orchestrator-gateway cat /app/config/openclaw.json` → пустой файл
-- **Влияние:** Конфигурация через ENV работает, но для совместимости с официальным OpenClaw нужен JSON
-- **Файлы:**
-  - `openclaw/config/openclaw.json`
-  - `openclaw/docker/docker-compose.orchestrator.yml` (volume mount)
-- **Содержимое:**
-  - Model configuration (gemini-3-flash-preview:cloud)
-  - Gateway settings (port 18789, auth)
-  - Workspace paths
-  - Channel configurations (Telegram)
-- **Связано:** Expert Consilium от 2026-02-12 (настройка через wizard vs ENV vs JSON)
 
 ---
 
@@ -502,6 +378,124 @@
 
 ### DOCFIX-010: Document Docker MCP Gateway Pattern 🟢
 - **Статус:** ЗАПЛАНИРОВАНО
+
+---
+
+## ⏸️ Фаза 11: OpenClaw Orchestrator Architecture — PAUSED (85%)
+
+> **🚨 ПРИОСТАНОВЛЕНО (2026-02-13)**
+>
+> **Решение:** Expert Consilium (consensus: 0.76) — временно отключить OpenClaw на сервере, освободить Docker ресурсы.
+> **Причина:** Фокус на приоритетных задачах, освобождение дискового пространства (~3GB).
+> **Восстановление:** `git pull && make deploy` (GitOps).
+>
+> OpenClaw = Orchestrator/UI Layer, Claude Code = Developer.
+
+### ORCH-001: Expert Review & Architecture Design ✅
+- **Статус:** ВЫПОЛНЕНО
+- **Консенсус:** **8.8/10** — ОТЛИЧНО, РЕАЛИЗУЙТЕ
+- **Файлы:** `docs/experts-opinions-openclaw-orchestrator.md`, `docs/OPENCLAW-ORCHESTRATOR-ARCHITECTURE.md`
+- **Завершено:** 2025-02-05
+
+### ORCH-002: Ollama Cloud Research ✅
+- **Статус:** ВЫПОЛНЕНО
+- gemini-3-flash-preview: FREE или $0.5/1M tokens, 1M context window
+- **Завершено:** 2025-02-05
+
+### ORCH-003: Command Protocol v1.0 Definition ✅
+- **Статус:** ВЫПОЛНЕНО
+- **Файлы:** `docs/commands/PROTOCOL-v1.md` — полный spec (320+ строк)
+- **MVP Commands:** create_project, status, help
+- **Завершено:** 2025-02-05
+
+### ORCH-004: CLI Bridge Implementation ✅
+- **Статус:** ВЫПОЛНЕНО + ПРОТЕСТИРОВАНО
+- **Файлы:** `server/scripts/claude-wrapper.sh` (320+ строк), `server/scripts/test-commands.sh`
+- **Тесты:** ✅ 4/4 PASSED (ainetic.tech validation)
+- **Завершено:** 2025-02-05
+
+### ORCH-005: OpenClaw Gateway Update ✅
+- **Статус:** ВЫПОЛНЕНО
+- **Модули:** ollama-client.ts, command-generator.ts, command-executor.ts
+- **Завершено:** 2025-02-05
+
+### ORCH-006: Documentation Updates ⏳
+- **Статус:** ЗАПЛАНИРОВАНО (PAUSED)
+- **Приоритет:** 🟡 СРЕДНИЙ (P1)
+- **Файлы:** PROJECT.md, README.md, docs/INDEX.md, docs/ARCHITECTURE-ANALYSIS.md
+
+### ORCH-007: Telegram Bot MVP (Orchestrator) ⏳
+- **Статус:** ЗАПЛАНИРОВАНО (PAUSED)
+- **Приоритет:** 🟡 СРЕДНИЙ (P1)
+- **Команды:** /new, /status, /help
+
+### ORCH-007.5: AI Intent Classifier Implementation ✅
+- **Статус:** ВЫПОЛНЕНО (Session #21, 2026-02-11)
+- **Приоритет:** 🟡 СРЕДНИЙ (P1) — РЕШЕНО
+- **Проблема:** Intent Pre-Classifier (commit `1d4a1aa`) обходит OpenClaw для свободных сообщений
+- **Решение:** Вариант D — AI Intent Classifier
+- **Файлы:**
+  - ✅ `openclaw/gateway/src/intent-classifier.ts` (новый модуль, 320+ строк)
+  - ✅ `openclaw/gateway/src/gateway.ts` (интеграция Intent Classifier)
+  - ✅ `server/scripts/claude-wrapper.sh` (обновлён: команда `deploy`, логирование confidence)
+- **Функциональность:**
+  - AI-powered классификация intent (gemini-3-flash-preview)
+  - Confidence scoring с threshold (0.7 по умолчанию)
+  - Extraction параметров из естественного языка
+  - Fallback на keyword matching при ошибках AI
+- **Intents:** create_project, status, help, deploy, chat
+- **Тесты:** ✅ 40+ unit tests PASSED
+- **Завершено:** 2026-02-11
+- **Analysis:** [@ref: docs/plans/2026-02-11-FINAL-artifact-migration-plan.md](docs/plans/2026-02-11-FINAL-artifact-migration-plan.md)
+
+### ORCH-008: Docker Compose Update ✅
+- **Статус:** ВЫПОЛНЕНО
+- **Файлы:** `openclaw/docker/docker-compose.orchestrator.yml`, `server/docker-compose.orchestrator.yml`
+- **Завершено:** 2025-02-05
+
+### ORCH-009: Testing & Validation 🔄
+- **Статус:** Unit tests ✅, E2E ⏳ (PAUSED)
+- **Unit:** 21/21 PASSED (local + remote)
+- **E2E:** Gateway ready, awaits API key deployment
+
+### ORCH-010: Deployment to ainetic.tech ✅
+- **Статус:** ВЫПОЛНЕНО (Session #22, 2026-02-12)
+- **E2E Tests:** 4/4 PASSED
+  - ✅ Gateway Health Check
+  - ✅ CLI Bridge: status command
+  - ✅ CLI Bridge: help command
+  - ✅ Gateway WebSocket Connection
+- **Services:**
+  - ✅ Gateway v2.0.1: healthy (uptime: 44h)
+  - ✅ Telegram-bot: connected (4 commands registered)
+  - ✅ Claude-runner: healthy (CLI Bridge operational)
+- **Report:** [@ref: docs/analysis/2026-02-12-ORCH-010-E2E-testing-report.md](docs/analysis/2026-02-12-ORCH-010-E2E-testing-report.md)
+- **Known Issues:** Docker socket permission (non-critical)
+- **Завершено:** 2026-02-12
+
+### ORCH-011: GLM-4.7-Flash Production Testing ✅
+- **Статус:** ВЫПОЛНЕНО
+- **Файлы:** `containers/claude-code-runner/Dockerfile`, `docs/lessons/websocket-client-health-check.md`
+- **All containers:** ✅ healthy
+- **Завершено:** 2025-02-05
+
+### ORCH-012: Install Claude CLI in Runner ⏳
+- **Статус:** ЗАПЛАНИРОВАНО (PAUSED)
+- **Приоритет:** 🟡 СРЕДНИЙ (P1)
+- **Описание:** Установка Claude CLI в контейнер `openclaw-orchestrator-claude-runner` для работы CLI Bridge
+- **Файлы:**
+  - `server/containers/claude-code-runner/Dockerfile`
+  - `openclaw/docker/docker-compose.orchestrator.yml`
+- **Зависимости:** ORCH-013 (openclaw.json)
+
+### ORCH-013: Create openclaw.json Configuration ⏳
+- **Статус:** ЗАПЛАНИРОВАНО (PAUSED)
+- **Приоритет:** 🟡 СРЕДНИЙ (P1)
+- **Описание:** Создание конфигурационного файла `openclaw.json` для корректной работы OpenClaw
+- **Файлы:**
+  - `openclaw/config/openclaw.json`
+  - `openclaw/docker/docker-compose.orchestrator.yml` (volume mount)
+- **Содержимое:** Model config, Gateway settings, Workspace paths, Channel configs
 
 ---
 
